@@ -1,5 +1,7 @@
 import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
+import { useVault } from "@/context/VaultContext";
+import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
 import { useEffect, useState } from "react";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
@@ -8,19 +10,22 @@ import Dialog, {
   DialogContents,
 } from "./ui/common/Dialog";
 import Input from "./ui/common/Input";
+import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
-export default function VaultView({ address }: { address: string }) {
-  console.log("address", address);
+export default function VaultView({}: { address: string }) {
+  const { vault } = useVault();
+  const vaultData: VaultDataView | undefined = vault?.vaultData;
+
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
   const [operation, setOperation] = useState<"deposit" | "withdraw" | null>(
     null
   );
   const [amount, setAmount] = useState("");
-  const walletBalance = "200"; // This would come from your wallet connection
+  const walletBalance = "1400"; // This would come from your wallet connection
 
   const handleOperation = (op: "deposit" | "withdraw") => {
     setOperation(op);
@@ -36,7 +41,11 @@ export default function VaultView({ address }: { address: string }) {
   };
 
   const handleMaxClick = () => {
-    setAmount(walletBalance);
+    setAmount(
+      operation === "deposit"
+        ? walletBalance
+        : vaultData!.positionRaw.toString()
+    );
   };
 
   useEffect(() => {
@@ -55,89 +64,101 @@ export default function VaultView({ address }: { address: string }) {
     return () => setActions(null); // Clean up when component unmounts
   }, [setActions]);
 
+  if (!vaultData) {
+    return <LoadingComponent text="Loading vault data..." />;
+  }
+
   return (
-    <>
-      <Card
-        title="Vault Overview"
-        subtitle="Performance metrics for this liquidity vault"
-        variant="large"
-      >
-        <CardRow left="TVL" right="$133,000" secondaryRight="(+2.3%)" />
-        <CardRow
-          left="APR (7 day avg)"
-          tooltip="Average annual percentage rate based on the last 7 days of performance."
-          highlightedRight
-          right="6.2%"
-          secondaryRight="(+0.5%)"
-        />
-        <CardRow
-          left="Value Gained"
-          right="12.4 WLD"
-          highlightedRight
-          secondaryRight="≈ $25.5"
-        />
-        <CardRow
-          left="Your Position"
-          right="200 WLD"
-          secondaryRight="≈ $412.00"
-        />
-      </Card>
-
-      {/* Dialog */}
-      <Dialog
-        open={showDialog}
-        onClose={() => setShowDialog(false)}
-        title={operation === "deposit" ? "Deposit WLD" : "Withdraw WLD"}
-      >
-        <DialogContents>
-          <Input
-            type="number"
-            label="Amount (WLD)"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            handleMaxClick={handleMaxClick}
-            labelMax={`Max: ${walletBalance} WLD`}
-            placeholder="0.0"
+    vaultData && (
+      <>
+        <Card
+          title="Vault Overview"
+          subtitle="Performance metrics for this liquidity vault"
+          variant="large"
+        >
+          <CardRow
+            left="TVL"
+            right={vaultData.tvl}
+            secondaryRight={vaultData.tvlChange}
           />
+          <CardRow
+            left="APR (7 day avg)"
+            tooltip="Average annual percentage rate based on the last 7 days of performance."
+            highlightedRight
+            right={vaultData.apr}
+            secondaryRight={vaultData.aprChange}
+          />
+          <CardRow
+            left="Value Gained"
+            highlightedRight
+            right={vaultData.valueGained}
+            secondaryRight={vaultData.valueGainedUSD}
+          />
+          <CardRow
+            left="Your Position"
+            right={vaultData.position}
+            secondaryRight={vaultData.positionUSD}
+          />
+        </Card>
 
-          {operation === "deposit" && (
-            <ObservationCard title="Deposit Process">
-              This is a two-step process:
-              <br />
-              1. Your WLD will be deposited into the vault
-              <br />
-              2. You&apos;ll receive vWLD shares that can be claimed later
-            </ObservationCard>
-          )}
+        {/* Dialog */}
+        <Dialog
+          open={showDialog}
+          onClose={() => setShowDialog(false)}
+          title={operation === "deposit" ? "Deposit WLD" : "Withdraw WLD"}
+        >
+          <DialogContents>
+            <Input
+              type="number"
+              label="Amount (WLD)"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              handleMaxClick={handleMaxClick}
+              labelMax={`Max: ${
+                operation === "deposit" ? walletBalance : vaultData.positionRaw
+              } WLD`}
+              placeholder="0.0"
+            />
 
-          {operation === "withdraw" && (
-            <>
-              <ObservationCard title="Withdrawal Process">
+            {operation === "deposit" && (
+              <ObservationCard title="Deposit Process">
                 This is a two-step process:
                 <br />
-                1. Your vWLD shares will be burned
+                1. Your WLD will be deposited into the vault
                 <br />
-                2. You&apos;ll need to redeem your WLD assets after settlement
+                2. You&apos;ll receive vWLD shares that can be claimed later
               </ObservationCard>
+            )}
 
-              <WarningCard title="Withdrawal Disclaimer">
-                Withdrawn assets will stop generating yield and will no longer
-                be part of the total value. Redeem them anytime after
-                settlement.
-              </WarningCard>
-            </>
-          )}
-        </DialogContents>
+            {operation === "withdraw" && (
+              <>
+                <ObservationCard title="Withdrawal Process">
+                  This is a two-step process:
+                  <br />
+                  1. Your vWLD shares will be burned
+                  <br />
+                  2. You&apos;ll need to redeem your WLD assets after settlement
+                </ObservationCard>
 
-        <DialogActionButtons>
-          <Button variant="secondary" onClick={() => setShowDialog(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit}>
-            {operation === "deposit" ? "Deposit" : "Withdraw"}
-          </Button>
-        </DialogActionButtons>
-      </Dialog>
-    </>
+                <WarningCard title="Withdrawal Disclaimer">
+                  Withdrawn assets will stop generating yield and will no longer
+                  be part of the total value. Redeem them anytime after
+                  settlement.
+                </WarningCard>
+              </>
+            )}
+          </DialogContents>
+
+          <DialogActionButtons>
+            <Button variant="secondary" onClick={() => setShowDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit}>
+              {operation === "deposit" ? "Deposit" : "Withdraw"}
+            </Button>
+          </DialogActionButtons>
+        </Dialog>
+      </>
+    )
   );
 }

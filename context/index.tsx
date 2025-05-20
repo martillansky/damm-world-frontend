@@ -15,7 +15,8 @@ import {
 import Providers from "./Providers";
 import ServerContent from "./ServerContent";
 import { ThemeProvider } from "./ThemeContext";
-import { useView, ViewProvider } from "./ViewContext";
+import { VaultProvider } from "./VaultContext";
+import { ViewProvider } from "./ViewContext";
 
 if (!projectId) {
   throw new Error("Project ID is not defined");
@@ -25,7 +26,7 @@ if (!projectId) {
 const metadata = {
   name: "DAMM World",
   description: "DAMM World",
-  url: "https://DAMM-World.com", // origin must match domain & subdomain
+  url: "https://DAMM-World.com",
   icons: ["/Damm_Capital_Isotipo_Fondo blanco.png"],
 };
 
@@ -53,7 +54,6 @@ interface ContextProviderProps {
 function WalletChangeHandler() {
   const { address } = useAccount();
   const router = useRouter();
-  const { setView } = useView();
   const [isInitialMount, setIsInitialMount] = useState(true);
   const queryClient = useQueryClient();
 
@@ -67,7 +67,6 @@ function WalletChangeHandler() {
     queryClient.clear();
 
     // Navigate to home page
-    setView("vault");
     router.push("/");
   }, [address, isInitialMount, router, queryClient]);
 
@@ -89,8 +88,10 @@ function ContextProvider({ children, cookies }: ContextProviderProps) {
         <ServerContent />
         <ThemeProvider>
           <ViewProvider>
-            <WalletChangeHandler />
-            {children}
+            <VaultProvider>
+              <WalletChangeHandler />
+              {children}
+            </VaultProvider>
           </ViewProvider>
         </ThemeProvider>
       </Providers>

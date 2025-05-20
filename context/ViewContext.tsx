@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, ReactNode, useContext, useState } from "react";
+import { useAppKitAccount } from "@reown/appkit/react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 export type View = "vault" | "position" | "activity";
 
@@ -16,7 +23,15 @@ interface ViewProviderProps {
 }
 
 export function ViewProvider({ children }: ViewProviderProps) {
+  const { address } = useAppKitAccount();
   const [view, setView] = useState<View>("vault");
+
+  // Set view to vault when wallet changes
+  useEffect(() => {
+    if (address) {
+      setView("vault");
+    }
+  }, [address]);
 
   return (
     <ViewContext.Provider

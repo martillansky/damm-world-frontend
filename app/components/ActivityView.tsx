@@ -1,17 +1,16 @@
-import {
-  mockedTransactions,
-  Transaction,
-} from "@/lib/utils/mocks/mockedTransactions";
+import { useVault } from "@/context/VaultContext";
+import { Transaction } from "@/lib/api/types/VaultData.types";
 import { useState } from "react";
 import CheckIcon from "./icons/CheckIcon";
 import CloseIcon from "./icons/CloseIcon";
 import WaitingSettlementIcon from "./icons/WaitingSettlementIcon";
 import Card from "./ui/common/Card";
+import LoadingComponent from "./ui/common/LoadingComponent";
 
-export default function ActivityView({ address }: { address: string }) {
-  console.log("address", address);
+export default function ActivityView({}: { address: string }) {
   const [filter, setFilter] = useState("all");
-  const transactions = mockedTransactions;
+  const { vault } = useVault();
+  const transactions = vault?.activityData ?? [];
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -124,29 +123,35 @@ export default function ActivityView({ address }: { address: string }) {
     );
   };
 
+  if (!transactions) {
+    return <LoadingComponent text="Loading activity data..." />;
+  }
+
   return (
-    <Card
-      title="Recent Activity"
-      variant="small"
-      subtitle="Transaction activity for this liquidity vault"
-      selector={
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="px-2 py-1 bg-surface-hover-light dark:bg-zinc-800 rounded-lg text-xs font-medium border border-border-light dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
-        >
-          <option value="all">All Activities</option>
-          <option value="cancellable">Cancellable</option>
-          <option value="deposit">Deposits</option>
-          <option value="withdraw">Withdraws</option>
-          <option value="claim">Claims</option>
-          <option value="redeem">Redeems</option>
-          <option value="claim_and_redeem">Claim & Redeem</option>
-          <option value="transfers">Transfers</option>
-        </select>
-      }
-    >
-      {getTxsTable()}
-    </Card>
+    transactions && (
+      <Card
+        title="Recent Activity"
+        variant="small"
+        subtitle="Transaction activity for this liquidity vault"
+        selector={
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="px-2 py-1 bg-surface-hover-light dark:bg-zinc-800 rounded-lg text-xs font-medium border border-border-light dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="all">All Activities</option>
+            <option value="cancellable">Cancellable</option>
+            <option value="deposit">Deposits</option>
+            <option value="withdraw">Withdraws</option>
+            <option value="claim">Claims</option>
+            <option value="redeem">Redeems</option>
+            <option value="claim_and_redeem">Claim & Redeem</option>
+            <option value="transfers">Transfers</option>
+          </select>
+        }
+      >
+        {getTxsTable()}
+      </Card>
+    )
   );
 }

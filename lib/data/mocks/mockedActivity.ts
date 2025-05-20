@@ -1,16 +1,6 @@
-// Mock data for transactions
+import { Transaction } from "@/lib/api/types/VaultData.types";
 
-export interface Transaction {
-  id: string;
-  type: string;
-  amount: string;
-  status: string;
-  timestamp: string;
-  txHash: string;
-  value: string;
-}
-
-export const mockedTransactions: Transaction[] = [
+export const mockedActivity: Transaction[] = [
   {
     id: "1234",
     type: "deposit",
