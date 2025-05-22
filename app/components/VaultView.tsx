@@ -1,6 +1,8 @@
 import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
 import { useVault } from "@/context/VaultContext";
+import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
+import { useDepositRequest } from "@/lib/contracts/hooks/useDepositRequest";
 import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
 import { useEffect, useState } from "react";
 import Button from "./ui/common/Button";
@@ -12,12 +14,14 @@ import Dialog, {
 import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
+import Toast, { ToastType } from "./ui/common/Toast";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function VaultView({}: { address: string }) {
   const { vault } = useVault();
   const vaultData: VaultDataView | undefined = vault?.vaultData;
+  const { submitDepositRequest } = useDepositRequest();
 
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
@@ -25,17 +29,62 @@ export default function VaultView({}: { address: string }) {
     null
   );
   const [amount, setAmount] = useState("");
-  const walletBalance = "1400"; // This would come from your wallet connection
+  const { getBalanceOf } = useBalanceOf();
+  const [walletBalance, setWalletBalance] = useState<string>("");
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<ToastType>("info");
 
   const handleOperation = (op: "deposit" | "withdraw") => {
     setOperation(op);
     setShowDialog(true);
   };
 
-  const handleSubmit = () => {
-    // Here you would handle the actual deposit/withdraw operation
-    console.log(`${operation} ${amount} WLD`);
-    setShowDialog(false);
+  const handleSubmit = async () => {
+    console.log("Starting submit process...");
+    if (operation === "deposit") {
+      try {
+        console.log("Closing dialog...");
+        setShowDialog(false);
+
+        console.log("Submitting deposit request...");
+        const tx = await submitDepositRequest(amount);
+        //submitDepositRequest(amount);
+        console.log("Transaction signed, showing submitted toast...");
+        setToastMessage("Deposit request submitted!");
+        setToastType("info");
+        setShowToast(true);
+        console.log("Toast state after submitted:", {
+          showToast,
+          toastMessage,
+          toastType,
+        });
+
+        console.log("Waiting for transaction confirmation...");
+        await tx.wait();
+        console.log("Transaction confirmed, showing confirmation toast...");
+        setToastMessage("Deposit request confirmed!");
+        setToastType("success");
+        setShowToast(true);
+        console.log("Toast state after confirmed:", {
+          showToast,
+          toastMessage,
+          toastType,
+        });
+      } catch (error) {
+        console.error("Error in deposit process:", error);
+        setToastMessage("Error submitting deposit request");
+        setToastType("error");
+        setShowToast(true);
+        console.log("Toast state after error:", {
+          showToast,
+          toastMessage,
+          toastType,
+        });
+      }
+    } else {
+      // TODO: Implement withdraw
+    }
     setAmount("");
     setOperation(null);
   };
@@ -47,6 +96,14 @@ export default function VaultView({}: { address: string }) {
         : vaultData!.positionRaw.toString()
     );
   };
+
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      const balance = await getBalanceOf();
+      setWalletBalance(balance);
+    };
+    fetchWalletBalance();
+  }, [getBalanceOf]);
 
   useEffect(() => {
     setActions(
@@ -158,6 +215,15 @@ export default function VaultView({}: { address: string }) {
             </Button>
           </DialogActionButtons>
         </Dialog>
+
+        {/* Toast */}
+        <Toast
+          show={showToast}
+          message={toastMessage}
+          type={toastType}
+          onClose={() => setShowToast(false)}
+          duration={5000}
+        />
       </>
     )
   );
