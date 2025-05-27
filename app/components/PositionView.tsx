@@ -1,8 +1,9 @@
 import { useVault } from "@/context/VaultContext";
+import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { PositionDataView } from "@/lib/data/types/DataPresenter.types";
 import { useEffect, useState } from "react";
-import ArrowDownIcon from "./icons/ArrowDownIcon";
-import ArrowRightIcon from "./icons/ArrowRightIcon";
+/* import ArrowDownIcon from "./icons/ArrowDownIcon";
+import ArrowRightIcon from "./icons/ArrowRightIcon"; */
 import RedeemIcon from "./icons/RedeemIcon";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
@@ -12,12 +13,17 @@ import Dialog, {
 } from "./ui/common/Dialog";
 import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
+import Toast, { ToastType } from "./ui/common/Toast";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function PositionView({}: { address: string }) {
   const { vault } = useVault();
   const positionData: PositionDataView | undefined = vault?.positionData;
+  const { submitRedeem } = useWithdraw();
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<ToastType>("info");
 
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
@@ -33,8 +39,26 @@ export default function PositionView({}: { address: string }) {
     setShowDialog(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setShowDialog(false);
+    if (operation === "redeem") {
+      try {
+        const tx = await submitRedeem(amount);
+        setToastMessage("Redeem request submitted!");
+        setToastType("info");
+        setShowToast(true);
+
+        await tx.wait();
+        setToastMessage("Redeem request confirmed!");
+        setToastType("success");
+        setShowToast(true);
+      } catch (error) {
+        console.error("Error in redeem process:", error);
+        setToastMessage("Error submitting redeem request");
+        setToastType("error");
+        setShowToast(true);
+      }
+    }
     setAmount("");
     setOperation(null);
   };
@@ -54,14 +78,14 @@ export default function PositionView({}: { address: string }) {
           <RedeemIcon />
           <span>Redeem</span>
         </Button>
-        <Button onClick={() => handleOperation("claim")}>
+        {/* <Button onClick={() => handleOperation("claim")}>
           <ArrowDownIcon />
           <span>Claim</span>
         </Button>
         <Button onClick={() => handleOperation("send")}>
           <ArrowRightIcon />
           <span>Send</span>
-        </Button>
+        </Button> */}
       </>
     );
     return () => setActions(null); // Clean up when component unmounts
@@ -177,6 +201,15 @@ export default function PositionView({}: { address: string }) {
             </Button>
           </DialogActionButtons>
         </Dialog>
+
+        {/* Toast */}
+        <Toast
+          show={showToast}
+          message={toastMessage}
+          type={toastType}
+          onClose={() => setShowToast(false)}
+          duration={5000}
+        />
       </>
     )
   );

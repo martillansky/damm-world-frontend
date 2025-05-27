@@ -11,22 +11,34 @@ export function useBalanceOf() {
     if (!address) throw new Error("No address found");
 
     const balanceNative = await getEthersProvider().getBalance(address);
-
     return formatUnits(balanceNative, 18);
   };
 
-  const getBalanceOf = async () => {
+  const getUnderlyingBalanceOf = async () => {
     if (!address) throw new Error("No address found");
 
     const { underlyingToken } = await getSignerAndContract(
-      address,
       network.chainId?.toString() ?? ""
     );
 
+    // These are the underlying tokens user has on his wallet
     const balance = await underlyingToken.balanceOf(address);
 
     return formatUnits(balance, 18);
   };
 
-  return { getBalanceOf, getNativeBalance };
+  const getBalanceOf = async () => {
+    if (!address) throw new Error("No address found");
+
+    const { vault } = await getSignerAndContract(
+      network.chainId?.toString() ?? ""
+    );
+
+    // These are the shares ready to be withdrawn (user holds them on his wallet)
+    const balance = await vault.balanceOf(address);
+
+    return formatUnits(balance, 18);
+  };
+
+  return { getUnderlyingBalanceOf, getNativeBalance, getBalanceOf };
 }

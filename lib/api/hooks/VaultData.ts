@@ -1,11 +1,11 @@
+import { useGetVaultDataDirectly } from "@/lib/data";
 import { useQuery } from "@tanstack/react-query";
-import {
-  getMockedVaultData,
-  getNullMockedVaultData,
-} from "../../data/mocks/index";
+import { getNullMockedVaultData } from "../../data/mocks/index";
 import { VaultDataResponse } from "../types/VaultData.types";
 
 export function useVaultData(wallet: string) {
+  const { getVaultDataDirectly } = useGetVaultDataDirectly();
+
   return useQuery<VaultDataResponse>({
     queryKey: ["vaultData", wallet],
     queryFn: async () => {
@@ -18,7 +18,7 @@ export function useVaultData(wallet: string) {
       } catch (error) {
         console.warn("Error fetching vault data:", error);
         console.warn("Returning mocked vault data");
-        return getMockedVaultData();
+        return await getVaultDataDirectly();
       }
     },
     enabled: !!wallet,

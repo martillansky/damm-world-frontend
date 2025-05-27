@@ -2,7 +2,9 @@ import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
 import { useVault } from "@/context/VaultContext";
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
-import { useDepositRequest } from "@/lib/contracts/hooks/useDepositRequest";
+import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
+//import { useSharesReadyToClaim } from "@/lib/contracts/hooks/useSharesReadyToClaim";
+import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
 import { useEffect, useState } from "react";
 import Button from "./ui/common/Button";
@@ -21,7 +23,8 @@ import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 export default function VaultView({}: { address: string }) {
   const { vault } = useVault();
   const vaultData: VaultDataView | undefined = vault?.vaultData;
-  const { submitDepositRequest } = useDepositRequest();
+  const { submitRequestDeposit } = useDeposit();
+  const { submitRequestWithdraw } = useWithdraw();
 
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
@@ -29,8 +32,11 @@ export default function VaultView({}: { address: string }) {
     null
   );
   const [amount, setAmount] = useState("");
-  const { getBalanceOf } = useBalanceOf();
+  const { getUnderlyingBalanceOf, getBalanceOf } = useBalanceOf();
+  //const { getSharesReadyToClaim } = useSharesReadyToClaim();
   const [walletBalance, setWalletBalance] = useState<string>("");
+  const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
+    useState<string>("");
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<ToastType>("info");
@@ -41,69 +47,65 @@ export default function VaultView({}: { address: string }) {
   };
 
   const handleSubmit = async () => {
-    console.log("Starting submit process...");
+    setShowDialog(false);
     if (operation === "deposit") {
       try {
-        console.log("Closing dialog...");
-        setShowDialog(false);
-
-        console.log("Submitting deposit request...");
-        const tx = await submitDepositRequest(amount);
-        //submitDepositRequest(amount);
-        console.log("Transaction signed, showing submitted toast...");
+        const tx = await submitRequestDeposit(amount);
         setToastMessage("Deposit request submitted!");
         setToastType("info");
         setShowToast(true);
-        console.log("Toast state after submitted:", {
-          showToast,
-          toastMessage,
-          toastType,
-        });
 
-        console.log("Waiting for transaction confirmation...");
         await tx.wait();
-        console.log("Transaction confirmed, showing confirmation toast...");
         setToastMessage("Deposit request confirmed!");
         setToastType("success");
         setShowToast(true);
-        console.log("Toast state after confirmed:", {
-          showToast,
-          toastMessage,
-          toastType,
-        });
       } catch (error) {
         console.error("Error in deposit process:", error);
         setToastMessage("Error submitting deposit request");
         setToastType("error");
         setShowToast(true);
-        console.log("Toast state after error:", {
-          showToast,
-          toastMessage,
-          toastType,
-        });
       }
     } else {
-      // TODO: Implement withdraw
+      try {
+        const tx = await submitRequestWithdraw(amount);
+        setToastMessage("Withdraw request submitted!");
+        setToastType("info");
+        setShowToast(true);
+
+        await tx.wait();
+        setToastMessage("Withdraw request confirmed!");
+        setToastType("success");
+        setShowToast(true);
+      } catch (error) {
+        console.error("Error in withdraw process:", error);
+        setToastMessage("Error submitting withdraw request");
+        setToastType("error");
+        setShowToast(true);
+      }
     }
     setAmount("");
     setOperation(null);
   };
 
   const handleMaxClick = () => {
-    setAmount(
-      operation === "deposit"
-        ? walletBalance
-        : vaultData!.positionRaw.toString()
-    );
+    setAmount(operation === "deposit" ? walletBalance : sharesReadyToWithdraw);
   };
 
   useEffect(() => {
     const fetchWalletBalance = async () => {
-      const balance = await getBalanceOf();
+      const balance = await getUnderlyingBalanceOf();
       setWalletBalance(balance);
     };
     fetchWalletBalance();
-  }, [getBalanceOf]);
+  }, [getUnderlyingBalanceOf]);
+
+  useEffect(() => {
+    const fetchSharesReadyToWithdraw = async () => {
+      const balance = await getBalanceOf();
+      setSharesReadyToWithdraw(balance);
+    };
+    fetchSharesReadyToWithdraw();
+  }, [setSharesReadyToWithdraw]);
 
   useEffect(() => {
     setActions(
@@ -172,7 +174,7 @@ export default function VaultView({}: { address: string }) {
               onChange={(e) => setAmount(e.target.value)}
               handleMaxClick={handleMaxClick}
               labelMax={`Max: ${
-                operation === "deposit" ? walletBalance : vaultData.positionRaw
+                operation === "deposit" ? walletBalance : sharesReadyToWithdraw
               } WLD`}
               placeholder="0.0"
             />
