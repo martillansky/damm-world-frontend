@@ -2,7 +2,7 @@ import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { PositionDataView } from "@/lib/data/types/DataPresenter.types";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 /* import ArrowDownIcon from "./icons/ArrowDownIcon";
 import ArrowRightIcon from "./icons/ArrowRightIcon"; */
 import RedeemIcon from "./icons/RedeemIcon";
@@ -20,8 +20,11 @@ import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function PositionView() {
   const { vault, isLoading } = useVault();
-  const { isChangingView } = useView();
-  const positionData: PositionDataView | undefined = vault?.positionData;
+  const { isChangingView, setViewLoaded } = useView();
+  const positionData: PositionDataView | undefined = useMemo(
+    () => vault?.positionData,
+    [vault?.positionData]
+  );
   const { submitRedeem } = useWithdraw();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -35,6 +38,12 @@ export default function PositionView() {
   const [amount, setAmount] = useState("");
   const [recipientWallet, setRecipientWallet] = useState("");
   const vWldBalance = "50"; // This would come from your wallet connection
+
+  useEffect(() => {
+    if (!isLoading && positionData) {
+      setViewLoaded();
+    }
+  }, [isLoading, positionData, setViewLoaded]);
 
   const handleOperation = (op: "claim" | "send" | "redeem") => {
     setOperation(op);

@@ -6,7 +6,7 @@ import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
 import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
 import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
 import Dialog, {
@@ -22,8 +22,11 @@ import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function VaultView() {
   const { vault, isLoading } = useVault();
-  const { isChangingView } = useView();
-  const vaultData: VaultDataView | undefined = vault?.vaultData;
+  const { isChangingView, setViewLoaded } = useView();
+  const vaultData: VaultDataView | undefined = useMemo(
+    () => vault?.vaultData,
+    [vault?.vaultData]
+  );
   const { submitRequestDeposit } = useDeposit();
   const { submitRequestWithdraw } = useWithdraw();
 
@@ -40,6 +43,12 @@ export default function VaultView() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<ToastType>("info");
+
+  useEffect(() => {
+    if (!isLoading && vaultData) {
+      setViewLoaded();
+    }
+  }, [isLoading, vaultData, setViewLoaded]);
 
   const handleOperation = (op: "deposit" | "withdraw") => {
     setOperation(op);

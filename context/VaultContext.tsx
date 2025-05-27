@@ -35,17 +35,17 @@ export function VaultProvider({ children }: VaultProviderProps) {
   }, [address]);
 
   useEffect(() => {
-    if (data) {
+    if (data && address) {
       setVault(DataWrangler({ data }));
     }
-  }, [data]);
+  }, [data, address]);
 
   return (
     <VaultContext.Provider
       value={{
         vault,
         setVault,
-        isLoading,
+        isLoading: address ? isLoading : false,
       }}
     >
       {children}

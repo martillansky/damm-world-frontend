@@ -67,6 +67,7 @@ export function useGetVaultDataDirectly() {
 
   const getVaultDataDirectly = async (): Promise<VaultDataResponse> => {
     try {
+      throw new Error("test");
       const vaultData = await getVaultData();
       const positionData = await getPositionData();
       const activityData = getActivityData();
@@ -77,7 +78,7 @@ export function useGetVaultDataDirectly() {
         activityData,
       };
     } catch (error) {
-      console.error(
+      console.warn(
         "Retrieving mocked data. Error fetching vault data from contract:",
         error
       );

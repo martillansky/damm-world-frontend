@@ -15,6 +15,7 @@ interface ViewContextType {
   view: View;
   setView: (view: View) => void;
   isChangingView: boolean;
+  setViewLoaded: () => void;
 }
 
 const ViewContext = createContext<ViewContextType | undefined>(undefined);
@@ -36,12 +37,16 @@ export function ViewProvider({ children }: ViewProviderProps) {
   }, [address]);
 
   const handleViewChange = (newView: View) => {
+    if (newView === view) return;
     setIsChangingView(true);
     setView(newView);
-    // Reset loading state after a short delay to ensure smooth transition
+  };
+
+  const setViewLoaded = () => {
     setTimeout(() => {
       setIsChangingView(false);
     }, 300);
+    //setIsChangingView(false);
   };
 
   return (
@@ -50,6 +55,7 @@ export function ViewProvider({ children }: ViewProviderProps) {
         view,
         setView: handleViewChange,
         isChangingView,
+        setViewLoaded,
       }}
     >
       {children}

@@ -1,7 +1,7 @@
 import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { Transaction } from "@/lib/api/types/VaultData.types";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CheckIcon from "./icons/CheckIcon";
 import CloseIcon from "./icons/CloseIcon";
 import WaitingSettlementIcon from "./icons/WaitingSettlementIcon";
@@ -10,9 +10,18 @@ import LoadingComponent from "./ui/common/LoadingComponent";
 
 export default function ActivityView() {
   const { vault, isLoading } = useVault();
-  const { isChangingView } = useView();
+  const { isChangingView, setViewLoaded } = useView();
   const [filter, setFilter] = useState("all");
-  const transactions = vault?.activityData ?? [];
+  const transactions = useMemo(
+    () => vault?.activityData ?? [],
+    [vault?.activityData]
+  );
+
+  useEffect(() => {
+    if (!isLoading && transactions) {
+      setViewLoaded();
+    }
+  }, [isLoading, transactions, setViewLoaded]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
