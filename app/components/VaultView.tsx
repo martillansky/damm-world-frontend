@@ -1,9 +1,9 @@
 import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
 import { useVault } from "@/context/VaultContext";
+import { useView } from "@/context/ViewContext";
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
 import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
-//import { useSharesReadyToClaim } from "@/lib/contracts/hooks/useSharesReadyToClaim";
 import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
 import { useEffect, useState } from "react";
@@ -20,8 +20,9 @@ import Toast, { ToastType } from "./ui/common/Toast";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
-export default function VaultView({}: { address: string }) {
-  const { vault } = useVault();
+export default function VaultView() {
+  const { vault, isLoading } = useVault();
+  const { isChangingView } = useView();
   const vaultData: VaultDataView | undefined = vault?.vaultData;
   const { submitRequestDeposit } = useDeposit();
   const { submitRequestWithdraw } = useWithdraw();
@@ -33,7 +34,6 @@ export default function VaultView({}: { address: string }) {
   );
   const [amount, setAmount] = useState("");
   const { getUnderlyingBalanceOf, getBalanceOf } = useBalanceOf();
-  //const { getSharesReadyToClaim } = useSharesReadyToClaim();
   const [walletBalance, setWalletBalance] = useState<string>("");
   const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
     useState<string>("");
@@ -105,7 +105,7 @@ export default function VaultView({}: { address: string }) {
       setSharesReadyToWithdraw(balance);
     };
     fetchSharesReadyToWithdraw();
-  }, [setSharesReadyToWithdraw]);
+  }, [getBalanceOf]);
 
   useEffect(() => {
     setActions(
@@ -123,7 +123,7 @@ export default function VaultView({}: { address: string }) {
     return () => setActions(null); // Clean up when component unmounts
   }, [setActions]);
 
-  if (!vaultData) {
+  if (isLoading || isChangingView || !vaultData) {
     return <LoadingComponent text="Loading vault data..." />;
   }
 

@@ -8,7 +8,6 @@ import { useEffect } from "react";
 export default function WalletView() {
   const { address } = useParams();
   const router = useRouter();
-  console.log("address", address);
   const { isConnected } = useAppKitAccount();
 
   // Redirect to vaults page
@@ -18,7 +17,7 @@ export default function WalletView() {
     } else {
       router.push(`/wallet/${address}/vault`);
     }
-  }, [isConnected, router]);
+  }, [isConnected, router, address]);
 
   // Show loading state while redirecting
   return (

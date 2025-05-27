@@ -1,4 +1,5 @@
 import { useVault } from "@/context/VaultContext";
+import { useView } from "@/context/ViewContext";
 import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { PositionDataView } from "@/lib/data/types/DataPresenter.types";
 import { useEffect, useState } from "react";
@@ -17,8 +18,9 @@ import Toast, { ToastType } from "./ui/common/Toast";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
-export default function PositionView({}: { address: string }) {
-  const { vault } = useVault();
+export default function PositionView() {
+  const { vault, isLoading } = useVault();
+  const { isChangingView } = useView();
   const positionData: PositionDataView | undefined = vault?.positionData;
   const { submitRedeem } = useWithdraw();
   const [showToast, setShowToast] = useState(false);
@@ -91,7 +93,7 @@ export default function PositionView({}: { address: string }) {
     return () => setActions(null); // Clean up when component unmounts
   }, [setActions]);
 
-  if (!positionData) {
+  if (isLoading || isChangingView || !positionData) {
     return <LoadingComponent text="Loading position data..." />;
   }
 

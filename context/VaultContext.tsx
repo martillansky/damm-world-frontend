@@ -15,6 +15,7 @@ import { useVaultData } from "../lib/api/hooks/VaultData";
 interface VaultContextType {
   vault: DataPresenter | null;
   setVault: (vault: DataPresenter | null) => void;
+  isLoading: boolean;
 }
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
@@ -26,7 +27,7 @@ interface VaultProviderProps {
 export function VaultProvider({ children }: VaultProviderProps) {
   const { address } = useAppKitAccount();
   const [vault, setVault] = useState<DataPresenter | null>(null);
-  const { data } = useVaultData(address ?? "");
+  const { data, isLoading } = useVaultData(address ?? "");
 
   // Reset vault state when wallet changes
   useEffect(() => {
@@ -44,6 +45,7 @@ export function VaultProvider({ children }: VaultProviderProps) {
       value={{
         vault,
         setVault,
+        isLoading,
       }}
     >
       {children}

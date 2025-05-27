@@ -18,18 +18,23 @@ export function useGetVaultDataDirectly() {
   const wldConversionRate = 1.4;
   let formattedTVL = 0;
   let redeemableAssets = 0;
+  let sharesReadyToClaim = 0;
   let position = 0;
   let positionUSD = 0;
+  let userBalance = 0;
 
   const getVaultData = async (): Promise<VaultData> => {
-    const tvl = await getTVL();
-    formattedTVL = Number(tvl) * wldConversionRate;
-    const userBalance = Number(await getBalanceOf());
-    const sharesReadyToClaim = Number(await getSharesReadyToClaim());
-    redeemableAssets = Number(await getRedeemableAssets());
-    position = userBalance + sharesReadyToClaim + redeemableAssets;
-
-    positionUSD = position * wldConversionRate; // TODO: check if this is correct
+    try {
+      const tvl = await getTVL();
+      formattedTVL = Number(tvl) * wldConversionRate;
+      userBalance = Number(await getBalanceOf());
+      sharesReadyToClaim = Number(await getSharesReadyToClaim());
+      redeemableAssets = Number(await getRedeemableAssets());
+      position = userBalance + sharesReadyToClaim + redeemableAssets;
+      positionUSD = position * wldConversionRate;
+    } catch (error) {
+      throw error;
+    }
     return {
       tvl: formattedTVL,
       tvlChange: 2.21,
@@ -43,17 +48,15 @@ export function useGetVaultDataDirectly() {
   };
 
   const getPositionData = async (): Promise<PositionData> => {
-    const redeemableAssets = Number(await getRedeemableAssets());
-    const claimableShares = Number(await getSharesReadyToClaim());
     return {
       totalValue: position,
       totalValueUSD: positionUSD,
-      wldBalance: 0,
+      wldBalance: userBalance,
       usdcBalance: 0,
       availableToRedeem: redeemableAssets,
       availableToRedeemUSD: redeemableAssets * wldConversionRate,
       vaultShare: (position * 100) / formattedTVL,
-      claimableShares,
+      claimableShares: sharesReadyToClaim,
       sharesInWallet: 0,
     };
   };

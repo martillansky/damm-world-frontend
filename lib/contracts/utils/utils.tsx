@@ -34,7 +34,6 @@ export async function getSignerAndContract(chainId: string) {
 
   let vault;
   if (chainId === anvil.id.toString()) {
-    console.log("CHAIN: ANVIL");
     vault = VaultForked__factory.connect(getVaultAddress(chainId), signer);
   } else {
     vault = Vault__factory.connect(getVaultAddress(chainId), signer);
@@ -78,8 +77,6 @@ export async function getTransactionReceipt(
 
 export function getEthersProvider(): ethers.providers.Web3Provider {
   if (typeof window !== "undefined" && typeof window.ethereum !== "undefined") {
-    console.log("CHAIN ID: ", window.ethereum.chainId);
-
     return new ethers.providers.Web3Provider(window.ethereum);
   } else {
     throw new Error("No injected provider found (e.g., MetaMask).");

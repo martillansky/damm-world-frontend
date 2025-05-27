@@ -1,4 +1,5 @@
 import { useVault } from "@/context/VaultContext";
+import { useView } from "@/context/ViewContext";
 import { Transaction } from "@/lib/api/types/VaultData.types";
 import { useState } from "react";
 import CheckIcon from "./icons/CheckIcon";
@@ -7,9 +8,10 @@ import WaitingSettlementIcon from "./icons/WaitingSettlementIcon";
 import Card from "./ui/common/Card";
 import LoadingComponent from "./ui/common/LoadingComponent";
 
-export default function ActivityView({}: { address: string }) {
+export default function ActivityView() {
+  const { vault, isLoading } = useVault();
+  const { isChangingView } = useView();
   const [filter, setFilter] = useState("all");
-  const { vault } = useVault();
   const transactions = vault?.activityData ?? [];
 
   const getStatusIcon = (status: string) => {
@@ -123,7 +125,7 @@ export default function ActivityView({}: { address: string }) {
     );
   };
 
-  if (!transactions) {
+  if (isLoading || isChangingView) {
     return <LoadingComponent text="Loading activity data..." />;
   }
 
