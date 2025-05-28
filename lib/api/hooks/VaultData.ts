@@ -17,7 +17,7 @@ export function useVaultData(wallet: string) {
         return res.json();
       } catch (error) {
         console.warn("Error fetching vault data:", error);
-        console.warn("Returning mocked vault data");
+        console.warn("Retrieving vault data from contract");
         return await getVaultDataDirectly();
       }
     },

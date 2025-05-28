@@ -37,7 +37,6 @@ export default function PositionView() {
   >(null);
   const [amount, setAmount] = useState("");
   const [recipientWallet, setRecipientWallet] = useState("");
-  const vWldBalance = "50"; // This would come from your wallet connection
 
   useEffect(() => {
     if (!isLoading && positionData) {
@@ -78,7 +77,7 @@ export default function PositionView() {
     setAmount(
       operation === "redeem"
         ? positionData!.availableToRedeemRaw.toString()
-        : vWldBalance
+        : ""
     );
   };
 
@@ -168,9 +167,7 @@ export default function PositionView() {
               onChange={(e) => setAmount(e.target.value)}
               handleMaxClick={handleMaxClick}
               labelMax={`Max: ${
-                operation === "redeem"
-                  ? positionData!.availableToRedeemRaw
-                  : vWldBalance
+                operation === "redeem" ? positionData!.availableToRedeemRaw : ""
               }${" "}
               ${operation === "redeem" ? "WLD" : "vWLD"}`}
               placeholder="0.0"

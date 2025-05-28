@@ -27,6 +27,16 @@ export function useDeposit() {
   const { address } = useAccount();
   const network = useAppKitNetwork();
 
+  const cancelDepositRequest = async () => {
+    if (!address) throw new Error("No address found");
+
+    const chainId = network.chainId?.toString() ?? "";
+    const { vault } = await getSignerAndContract(chainId);
+
+    const tx = await vault.cancelRequestDeposit();
+    return tx as unknown as TransactionResponse;
+  };
+
   const submitRequestDeposit = async (amount: string) => {
     if (!address) throw new Error("No address found");
 
@@ -43,5 +53,5 @@ export function useDeposit() {
     return tx as unknown as TransactionResponse;
   };
 
-  return { submitRequestDeposit };
+  return { submitRequestDeposit, cancelDepositRequest };
 }

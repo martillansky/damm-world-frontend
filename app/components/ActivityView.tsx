@@ -1,6 +1,7 @@
 import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { Transaction } from "@/lib/api/types/VaultData.types";
+import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
 import { useEffect, useMemo, useState } from "react";
 import CheckIcon from "./icons/CheckIcon";
 import CloseIcon from "./icons/CloseIcon";
@@ -10,12 +11,18 @@ import LoadingComponent from "./ui/common/LoadingComponent";
 
 export default function ActivityView() {
   const { vault, isLoading } = useVault();
+  const { cancelDepositRequest } = useDeposit();
   const { isChangingView, setViewLoaded } = useView();
   const [filter, setFilter] = useState("all");
   const transactions = useMemo(
     () => vault?.activityData ?? [],
     [vault?.activityData]
   );
+
+  const handleCancelDeposit = (tx: Transaction) => {
+    cancelDepositRequest();
+    console.log("Cancel deposit", tx);
+  };
 
   useEffect(() => {
     if (!isLoading && transactions) {
@@ -40,7 +47,10 @@ export default function ActivityView() {
   const getActionButton = (tx: Transaction) => {
     if (tx.type === "deposit" && tx.status === "waiting_settlement") {
       return (
-        <button className="p-1.5 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors border-2 border-red-500/80 hover:border-red-500">
+        <button
+          onClick={() => handleCancelDeposit(tx)}
+          className="p-1.5 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors border-2 border-red-500/80 hover:border-red-500"
+        >
           <CloseIcon className="w-4 h-4" />
         </button>
       );

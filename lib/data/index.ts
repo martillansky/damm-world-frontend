@@ -1,3 +1,4 @@
+import { formatUnits } from "ethers/lib/utils";
 import {
   PositionData,
   Transaction,
@@ -6,15 +7,18 @@ import {
 } from "../api/types/VaultData.types";
 import { useBalanceOf } from "../contracts/hooks/useBalanceOf";
 import { useRedeemableAssets } from "../contracts/hooks/useRedeemableAssets";
+import { useRetrieveTxs } from "../contracts/hooks/useRetrieveTxs";
 import { useSharesReadyToClaim } from "../contracts/hooks/useSharesReadyToClaim";
 import { useTVL } from "../contracts/hooks/useTVL";
 import { getMockedVaultData } from "./mocks";
+import { formatTimestamp } from "./utils/utils";
 
 export function useGetVaultDataDirectly() {
   const { getTVL } = useTVL();
   const { getBalanceOf } = useBalanceOf();
   const { getSharesReadyToClaim } = useSharesReadyToClaim();
   const { getRedeemableAssets } = useRedeemableAssets();
+  const { getRecentTxs } = useRetrieveTxs();
   const wldConversionRate = 1.4;
   let formattedTVL = 0;
   let redeemableAssets = 0;
@@ -55,22 +59,56 @@ export function useGetVaultDataDirectly() {
       usdcBalance: 0,
       availableToRedeem: redeemableAssets,
       availableToRedeemUSD: redeemableAssets * wldConversionRate,
-      vaultShare: (position * 100) / formattedTVL,
+      vaultShare: formattedTVL > 0 ? (positionUSD * 100) / formattedTVL : 0,
       claimableShares: sharesReadyToClaim,
       sharesInWallet: 0,
     };
   };
 
-  const getActivityData = (): Transaction[] => {
-    return [];
+  const getActivityData = async (): Promise<Transaction[]> => {
+    const txs = await getRecentTxs();
+    return txs.map((tx, index) => {
+      const functType =
+        tx.functionName === "deposit"
+          ? "deposit"
+          : tx.functionName === "redeem"
+          ? "withdraw"
+          : tx.functionName === "requestDeposit"
+          ? "deposit"
+          : tx.functionName === "requestRedeem"
+          ? "withdraw"
+          : "unknown";
+      const functStatus =
+        tx.functionName === "deposit"
+          ? "completed"
+          : tx.functionName === "redeem"
+          ? "completed"
+          : tx.functionName === "requestDeposit"
+          ? "waiting_settlement"
+          : tx.functionName === "requestRedeem"
+          ? "waiting_settlement"
+          : "unknown";
+
+      const amount = Number(formatUnits(tx.args[0], 18));
+      const value = amount * wldConversionRate;
+      return {
+        id: index.toString(),
+        amount: `${amount.toString()} WLD`,
+        status: functStatus,
+        txHash: tx.hash.slice(0, 6) + "..." + tx.hash.slice(-4),
+        type: functType,
+        value: `+$${value.toString()}`,
+        timestamp: tx.timestamp ? formatTimestamp(Number(tx.timestamp)) : "",
+      };
+    });
   };
 
   const getVaultDataDirectly = async (): Promise<VaultDataResponse> => {
     try {
-      throw new Error("test");
+      //throw new Error("test");
       const vaultData = await getVaultData();
       const positionData = await getPositionData();
-      const activityData = getActivityData();
+      const activityData = await getActivityData();
 
       return {
         vaultData,
