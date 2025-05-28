@@ -49,6 +49,8 @@ export function useRetrieveTxs() {
       null,
       address
     );
+    const filterRedeemSettledEvents = vault.filters.SettleRedeem();
+
     const latestBlock = await provider.getBlockNumber();
     const txs: (TransactionResponse & {
       functionName: string;
@@ -91,7 +93,19 @@ export function useRetrieveTxs() {
                   return { isSettled: false, isCanceled: false };
                 }
               }
+            } else if (parsedTx.functionName === "requestRedeem") {
+              const logs = await vault.queryFilter(
+                filterRedeemSettledEvents,
+                tx.blockNumber ? tx.blockNumber + 1 : 0
+              );
+              if (logs.length > 0) {
+                console.log("SettleRedeem event detected.", logs);
+                return { isSettled: true, isCanceled: false };
+              } else {
+                return { isSettled: false, isCanceled: false };
+              }
             }
+
             return { isSettled: false, isCanceled: false };
           };
 

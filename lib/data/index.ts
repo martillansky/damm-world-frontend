@@ -72,7 +72,7 @@ export function useGetVaultDataDirectly() {
         tx.functionName === "deposit"
           ? "deposit"
           : tx.functionName === "redeem"
-          ? "withdraw"
+          ? "redeem"
           : tx.functionName === "requestDeposit"
           ? "deposit"
           : tx.functionName === "requestRedeem"
@@ -95,8 +95,10 @@ export function useGetVaultDataDirectly() {
             !tx.isSettled &&
             tx.isCanceled
           ? "failed"
-          : tx.functionName === "requestRedeem"
+          : tx.functionName === "requestRedeem" && !tx.isSettled
           ? "waiting_settlement"
+          : tx.functionName === "requestRedeem" && tx.isSettled
+          ? "completed"
           : "unknown";
 
       const amount = Number(formatUnits(tx.args[0], 18));
