@@ -83,8 +83,18 @@ export function useGetVaultDataDirectly() {
           ? "completed"
           : tx.functionName === "redeem"
           ? "completed"
-          : tx.functionName === "requestDeposit"
+          : tx.functionName === "requestDeposit" &&
+            !tx.isSettled &&
+            !tx.isCanceled
           ? "waiting_settlement"
+          : tx.functionName === "requestDeposit" &&
+            tx.isSettled &&
+            !tx.isCanceled
+          ? "settled"
+          : tx.functionName === "requestDeposit" &&
+            !tx.isSettled &&
+            tx.isCanceled
+          ? "failed"
           : tx.functionName === "requestRedeem"
           ? "waiting_settlement"
           : "unknown";

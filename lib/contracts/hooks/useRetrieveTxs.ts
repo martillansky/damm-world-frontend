@@ -41,11 +41,20 @@ export function useRetrieveTxs() {
 
   const getRecentTxs = async (count = 20) => {
     const provider = getEthersProvider();
-
+    const { vault } = await getSignerAndContract(
+      network.chainId?.toString() ?? ""
+    );
+    const filterSettleDepositEvents = vault.filters.SettleDeposit();
+    const filterCanceledDepositEvents = vault.filters.DepositRequestCanceled(
+      null,
+      address
+    );
     const latestBlock = await provider.getBlockNumber();
     const txs: (TransactionResponse & {
       functionName: string;
       args: Result;
+      isSettled: boolean;
+      isCanceled: boolean;
     })[] = [];
 
     for (let i = latestBlock; i > latestBlock - count; i--) {
@@ -57,17 +66,53 @@ export function useRetrieveTxs() {
       const parsedTxs = await Promise.all(
         filteredTxs.map(async (tx) => {
           const parsedTx = await parseTx(tx);
+
+          const checkSettleDepositEvent = async (): Promise<{
+            isSettled: boolean;
+            isCanceled: boolean;
+          }> => {
+            if (parsedTx.functionName === "requestDeposit") {
+              const logs = await vault.queryFilter(
+                filterSettleDepositEvents,
+                tx.blockNumber ? tx.blockNumber + 1 : 0
+              );
+              if (logs.length > 0) {
+                console.log("SettleDeposit event detected.", logs);
+                return { isSettled: true, isCanceled: false };
+              } else {
+                const logs = await vault.queryFilter(
+                  filterCanceledDepositEvents,
+                  tx.blockNumber ? tx.blockNumber + 1 : 0
+                );
+                if (logs.length > 0) {
+                  console.log("DepositRequestCanceled event detected.", logs);
+                  return { isSettled: false, isCanceled: true };
+                } else {
+                  return { isSettled: false, isCanceled: false };
+                }
+              }
+            }
+            return { isSettled: false, isCanceled: false };
+          };
+
+          const { isSettled, isCanceled } = await checkSettleDepositEvent();
+
           return {
             ...tx,
             ...parsedTx,
+            isSettled,
+            isCanceled,
             timestamp: block.timestamp,
           } as TransactionResponse & {
             functionName: string;
             args: Result;
+            isSettled: boolean;
+            isCanceled: boolean;
           };
         })
       );
 
+      //const validTxs = parsedTxs;
       const validTxs = parsedTxs.filter(
         (tx) =>
           tx.functionName === "deposit" ||
@@ -78,7 +123,7 @@ export function useRetrieveTxs() {
 
       txs.push(...validTxs);
     }
-
+    console.log("parsedTxs", txs);
     return txs;
   };
   return { getRecentTxs };
