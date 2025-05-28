@@ -61,7 +61,7 @@ export function useGetVaultDataDirectly() {
       availableToRedeemUSD: redeemableAssets * wldConversionRate,
       vaultShare: formattedTVL > 0 ? (positionUSD * 100) / formattedTVL : 0,
       claimableShares: sharesReadyToClaim,
-      sharesInWallet: 0,
+      sharesInWallet: userBalance,
     };
   };
 
