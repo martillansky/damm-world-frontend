@@ -1,4 +1,4 @@
-import InfoIcon from "@/app/components/icons/InfoIcon";
+import PencilIcon from "@/app/components/icons/PencilIcon";
 
 const ObservationCard = ({
   title,
@@ -12,7 +12,7 @@ const ObservationCard = ({
       <p className="text-sm text-blue-500">
         {title && (
           <span className="font-medium block mb-2 flex items-center gap-2">
-            <InfoIcon />
+            <PencilIcon />
             {title}
           </span>
         )}

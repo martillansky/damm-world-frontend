@@ -1,8 +1,14 @@
 import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
 import { useVault } from "@/context/VaultContext";
+import { useView } from "@/context/ViewContext";
+import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
+import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
+import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
-import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
 import Dialog, {
@@ -12,12 +18,21 @@ import Dialog, {
 import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
+import Toast, { ToastType } from "./ui/common/Toast";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
-export default function VaultView({}: { address: string }) {
-  const { vault } = useVault();
-  const vaultData: VaultDataView | undefined = vault?.vaultData;
+export default function VaultView() {
+  const { address } = useParams();
+  const { vault, isLoading } = useVault();
+  const queryClient = useQueryClient();
+  const { isChangingView, setViewLoaded } = useView();
+  const vaultData: VaultDataView | undefined = useMemo(
+    () => vault?.vaultData,
+    [vault?.vaultData]
+  );
+  const { submitRequestDeposit } = useDeposit();
+  const { submitRequestWithdraw } = useWithdraw();
 
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
@@ -25,28 +40,87 @@ export default function VaultView({}: { address: string }) {
     null
   );
   const [amount, setAmount] = useState("");
-  const walletBalance = "1400"; // This would come from your wallet connection
+  const { getUnderlyingBalanceOf, getBalanceOf } = useBalanceOf();
+  const [walletBalance, setWalletBalance] = useState<string>("");
+  const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
+    useState<string>("");
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<ToastType>("info");
+
+  useEffect(() => {
+    if (!isLoading && vaultData) {
+      setViewLoaded();
+    }
+  }, [isLoading, vaultData, setViewLoaded]);
 
   const handleOperation = (op: "deposit" | "withdraw") => {
     setOperation(op);
     setShowDialog(true);
   };
 
-  const handleSubmit = () => {
-    // Here you would handle the actual deposit/withdraw operation
-    console.log(`${operation} ${amount} WLD`);
+  const handleSubmit = async () => {
     setShowDialog(false);
+    if (operation === "deposit") {
+      try {
+        const tx = await submitRequestDeposit(amount);
+        setToastMessage("Deposit request submitted!");
+        setToastType("info");
+        setShowToast(true);
+
+        await tx.wait();
+        setToastMessage("Deposit request confirmed!");
+        setToastType("success");
+        setShowToast(true);
+      } catch (error) {
+        console.error("Error in deposit process:", error);
+        setToastMessage("Error submitting deposit request");
+        setToastType("error");
+        setShowToast(true);
+      }
+    } else {
+      try {
+        const tx = await submitRequestWithdraw(amount);
+        setToastMessage("Withdraw request submitted!");
+        setToastType("info");
+        setShowToast(true);
+
+        await tx.wait();
+        setToastMessage("Withdraw request confirmed!");
+        setToastType("success");
+        setShowToast(true);
+      } catch (error) {
+        console.error("Error in withdraw process:", error);
+        setToastMessage("Error submitting withdraw request");
+        setToastType("error");
+        setShowToast(true);
+      }
+    }
     setAmount("");
     setOperation(null);
+    // Invalidate and refetch vault data
+    queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
   };
 
   const handleMaxClick = () => {
-    setAmount(
-      operation === "deposit"
-        ? walletBalance
-        : vaultData!.positionRaw.toString()
-    );
+    setAmount(operation === "deposit" ? walletBalance : sharesReadyToWithdraw);
   };
+
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      const balance = await getUnderlyingBalanceOf();
+      setWalletBalance(balance);
+    };
+    fetchWalletBalance();
+  }, [getUnderlyingBalanceOf]);
+
+  useEffect(() => {
+    const fetchSharesReadyToWithdraw = async () => {
+      const balance = await getBalanceOf();
+      setSharesReadyToWithdraw(balance);
+    };
+    fetchSharesReadyToWithdraw();
+  }, [getBalanceOf]);
 
   useEffect(() => {
     setActions(
@@ -64,7 +138,7 @@ export default function VaultView({}: { address: string }) {
     return () => setActions(null); // Clean up when component unmounts
   }, [setActions]);
 
-  if (!vaultData) {
+  if (isLoading || isChangingView || !vaultData) {
     return <LoadingComponent text="Loading vault data..." />;
   }
 
@@ -115,7 +189,7 @@ export default function VaultView({}: { address: string }) {
               onChange={(e) => setAmount(e.target.value)}
               handleMaxClick={handleMaxClick}
               labelMax={`Max: ${
-                operation === "deposit" ? walletBalance : vaultData.positionRaw
+                operation === "deposit" ? walletBalance : sharesReadyToWithdraw
               } WLD`}
               placeholder="0.0"
             />
@@ -158,6 +232,15 @@ export default function VaultView({}: { address: string }) {
             </Button>
           </DialogActionButtons>
         </Dialog>
+
+        {/* Toast */}
+        <Toast
+          show={showToast}
+          message={toastMessage}
+          type={toastType}
+          onClose={() => setShowToast(false)}
+          duration={5000}
+        />
       </>
     )
   );

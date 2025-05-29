@@ -1,8 +1,12 @@
 import { useVault } from "@/context/VaultContext";
+import { useView } from "@/context/ViewContext";
+import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { PositionDataView } from "@/lib/data/types/DataPresenter.types";
-import { useEffect, useState } from "react";
-import ArrowDownIcon from "./icons/ArrowDownIcon";
-import ArrowRightIcon from "./icons/ArrowRightIcon";
+import { useEffect, useMemo, useState } from "react";
+/* import ArrowDownIcon from "./icons/ArrowDownIcon";
+import ArrowRightIcon from "./icons/ArrowRightIcon"; */
+import { useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import RedeemIcon from "./icons/RedeemIcon";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
@@ -12,12 +16,23 @@ import Dialog, {
 } from "./ui/common/Dialog";
 import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
+import Toast, { ToastType } from "./ui/common/Toast";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
-export default function PositionView({}: { address: string }) {
-  const { vault } = useVault();
-  const positionData: PositionDataView | undefined = vault?.positionData;
+export default function PositionView() {
+  const { address } = useParams();
+  const { vault, isLoading } = useVault();
+  const queryClient = useQueryClient();
+  const { isChangingView, setViewLoaded } = useView();
+  const positionData: PositionDataView | undefined = useMemo(
+    () => vault?.positionData,
+    [vault?.positionData]
+  );
+  const { submitRedeem } = useWithdraw();
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<ToastType>("info");
 
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
@@ -26,24 +41,49 @@ export default function PositionView({}: { address: string }) {
   >(null);
   const [amount, setAmount] = useState("");
   const [recipientWallet, setRecipientWallet] = useState("");
-  const vWldBalance = "50"; // This would come from your wallet connection
+
+  useEffect(() => {
+    if (!isLoading && positionData) {
+      setViewLoaded();
+    }
+  }, [isLoading, positionData, setViewLoaded]);
 
   const handleOperation = (op: "claim" | "send" | "redeem") => {
     setOperation(op);
     setShowDialog(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setShowDialog(false);
+    if (operation === "redeem") {
+      try {
+        const tx = await submitRedeem(amount);
+        setToastMessage("Redeem request submitted!");
+        setToastType("info");
+        setShowToast(true);
+
+        await tx.wait();
+        setToastMessage("Redeem request confirmed!");
+        setToastType("success");
+        setShowToast(true);
+      } catch (error) {
+        console.error("Error in redeem process:", error);
+        setToastMessage("Error submitting redeem request");
+        setToastType("error");
+        setShowToast(true);
+      }
+    }
     setAmount("");
     setOperation(null);
+    // Invalidate and refetch vault data
+    queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
   };
 
   const handleMaxClick = () => {
     setAmount(
       operation === "redeem"
         ? positionData!.availableToRedeemRaw.toString()
-        : vWldBalance
+        : ""
     );
   };
 
@@ -54,20 +94,20 @@ export default function PositionView({}: { address: string }) {
           <RedeemIcon />
           <span>Redeem</span>
         </Button>
-        <Button onClick={() => handleOperation("claim")}>
+        {/* <Button onClick={() => handleOperation("claim")}>
           <ArrowDownIcon />
           <span>Claim</span>
         </Button>
         <Button onClick={() => handleOperation("send")}>
           <ArrowRightIcon />
           <span>Send</span>
-        </Button>
+        </Button> */}
       </>
     );
     return () => setActions(null); // Clean up when component unmounts
   }, [setActions]);
 
-  if (!positionData) {
+  if (isLoading || isChangingView || !positionData) {
     return <LoadingComponent text="Loading position data..." />;
   }
 
@@ -133,9 +173,7 @@ export default function PositionView({}: { address: string }) {
               onChange={(e) => setAmount(e.target.value)}
               handleMaxClick={handleMaxClick}
               labelMax={`Max: ${
-                operation === "redeem"
-                  ? positionData!.availableToRedeemRaw
-                  : vWldBalance
+                operation === "redeem" ? positionData!.availableToRedeemRaw : ""
               }${" "}
               ${operation === "redeem" ? "WLD" : "vWLD"}`}
               placeholder="0.0"
@@ -177,6 +215,15 @@ export default function PositionView({}: { address: string }) {
             </Button>
           </DialogActionButtons>
         </Dialog>
+
+        {/* Toast */}
+        <Toast
+          show={showToast}
+          message={toastMessage}
+          type={toastType}
+          onClose={() => setShowToast(false)}
+          duration={5000}
+        />
       </>
     )
   );

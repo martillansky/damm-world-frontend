@@ -1,16 +1,52 @@
 import { useVault } from "@/context/VaultContext";
+import { useView } from "@/context/ViewContext";
 import { Transaction } from "@/lib/api/types/VaultData.types";
-import { useState } from "react";
+import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
+import { useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import CheckIcon from "./icons/CheckIcon";
 import CloseIcon from "./icons/CloseIcon";
 import WaitingSettlementIcon from "./icons/WaitingSettlementIcon";
 import Card from "./ui/common/Card";
 import LoadingComponent from "./ui/common/LoadingComponent";
+import Toast, { ToastType } from "./ui/common/Toast";
 
-export default function ActivityView({}: { address: string }) {
+export default function ActivityView() {
+  const { address } = useParams();
+  const { vault, isLoading } = useVault();
+  const queryClient = useQueryClient();
+  const { cancelDepositRequest } = useDeposit();
+  const { isChangingView, setViewLoaded } = useView();
   const [filter, setFilter] = useState("all");
-  const { vault } = useVault();
-  const transactions = vault?.activityData ?? [];
+  const transactions = useMemo(
+    () => vault?.activityData ?? [],
+    [vault?.activityData]
+  );
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<ToastType>("info");
+
+  const handleCancelDeposit = async () => {
+    const tx = await cancelDepositRequest();
+    setToastMessage("Cancel deposit request submitted!");
+    setToastType("info");
+    setShowToast(true);
+
+    await tx.wait();
+    setToastMessage("Deposit request successfully canceled!");
+    setToastType("success");
+    setShowToast(true);
+
+    // Invalidate and refetch vault data
+    queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
+  };
+
+  useEffect(() => {
+    if (!isLoading && transactions) {
+      setViewLoaded();
+    }
+  }, [isLoading, transactions, setViewLoaded]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -29,7 +65,10 @@ export default function ActivityView({}: { address: string }) {
   const getActionButton = (tx: Transaction) => {
     if (tx.type === "deposit" && tx.status === "waiting_settlement") {
       return (
-        <button className="p-1.5 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors border-2 border-red-500/80 hover:border-red-500">
+        <button
+          onClick={() => handleCancelDeposit()}
+          className="p-1.5 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors border-2 border-red-500/80 hover:border-red-500"
+        >
           <CloseIcon className="w-4 h-4" />
         </button>
       );
@@ -123,35 +162,46 @@ export default function ActivityView({}: { address: string }) {
     );
   };
 
-  if (!transactions) {
+  if (isLoading || isChangingView) {
     return <LoadingComponent text="Loading activity data..." />;
   }
 
   return (
     transactions && (
-      <Card
-        title="Recent Activity"
-        variant="small"
-        subtitle="Transaction activity for this liquidity vault"
-        selector={
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="px-2 py-1 bg-surface-hover-light dark:bg-zinc-800 rounded-lg text-xs font-medium border border-border-light dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="all">All Activities</option>
-            <option value="cancellable">Cancellable</option>
-            <option value="deposit">Deposits</option>
-            <option value="withdraw">Withdraws</option>
-            <option value="claim">Claims</option>
-            <option value="redeem">Redeems</option>
-            <option value="claim_and_redeem">Claim & Redeem</option>
-            <option value="transfers">Transfers</option>
-          </select>
-        }
-      >
-        {getTxsTable()}
-      </Card>
+      <>
+        <Card
+          title="Recent Activity"
+          variant="small"
+          subtitle="Transaction activity for this liquidity vault"
+          selector={
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="px-2 py-1 bg-surface-hover-light dark:bg-zinc-800 rounded-lg text-xs font-medium border border-border-light dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="all">All Activities</option>
+              <option value="cancellable">Cancellable</option>
+              <option value="deposit">Deposits</option>
+              <option value="withdraw">Withdraws</option>
+              <option value="claim">Claims</option>
+              <option value="redeem">Redeems</option>
+              <option value="claim_and_redeem">Claim & Redeem</option>
+              <option value="transfers">Transfers</option>
+            </select>
+          }
+        >
+          {getTxsTable()}
+        </Card>
+
+        {/* Toast */}
+        <Toast
+          show={showToast}
+          message={toastMessage}
+          type={toastType}
+          onClose={() => setShowToast(false)}
+          duration={5000}
+        />
+      </>
     )
   );
 }

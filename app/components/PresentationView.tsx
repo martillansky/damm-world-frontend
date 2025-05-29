@@ -11,7 +11,7 @@ export default function PresentationView() {
 
   useEffect(() => {
     setView("vault");
-  }, []);
+  }, [setView]);
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-black text-foreground-light dark:text-foreground">

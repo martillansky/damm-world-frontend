@@ -1,7 +1,7 @@
-const InfoIcon = () => {
+const ErrorIcon = () => {
   return (
     <svg
-      className="h-4 w-4 text-blue-400"
+      className="h-4 w-4 text-red-400"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -10,10 +10,10 @@ const InfoIcon = () => {
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={2}
-        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        d="M6 18L18 6M6 6l12 12"
       />
     </svg>
   );
 };
 
-export default InfoIcon;
+export default ErrorIcon;

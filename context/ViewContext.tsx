@@ -14,6 +14,8 @@ export type View = "vault" | "position" | "activity";
 interface ViewContextType {
   view: View;
   setView: (view: View) => void;
+  isChangingView: boolean;
+  setViewLoaded: () => void;
 }
 
 const ViewContext = createContext<ViewContextType | undefined>(undefined);
@@ -25,19 +27,35 @@ interface ViewProviderProps {
 export function ViewProvider({ children }: ViewProviderProps) {
   const { address } = useAppKitAccount();
   const [view, setView] = useState<View>("vault");
+  const [isChangingView, setIsChangingView] = useState(false);
 
   // Set view to vault when wallet changes
   useEffect(() => {
     if (address) {
-      setView("vault");
+      handleViewChange("vault");
     }
   }, [address]);
+
+  const handleViewChange = (newView: View) => {
+    if (newView === view) return;
+    setIsChangingView(true);
+    setView(newView);
+  };
+
+  const setViewLoaded = () => {
+    setTimeout(() => {
+      setIsChangingView(false);
+    }, 300);
+    //setIsChangingView(false);
+  };
 
   return (
     <ViewContext.Provider
       value={{
         view,
-        setView,
+        setView: handleViewChange,
+        isChangingView,
+        setViewLoaded,
       }}
     >
       {children}
