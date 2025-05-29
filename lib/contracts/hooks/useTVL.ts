@@ -15,7 +15,6 @@ export function useTVL() {
     );
 
     const tvl = await vault.totalSupply();
-
     return formatUnits(tvl, 18);
   };
 

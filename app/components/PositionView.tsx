@@ -5,6 +5,8 @@ import { PositionDataView } from "@/lib/data/types/DataPresenter.types";
 import { useEffect, useMemo, useState } from "react";
 /* import ArrowDownIcon from "./icons/ArrowDownIcon";
 import ArrowRightIcon from "./icons/ArrowRightIcon"; */
+import { useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import RedeemIcon from "./icons/RedeemIcon";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
@@ -19,7 +21,9 @@ import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function PositionView() {
+  const { address } = useParams();
   const { vault, isLoading } = useVault();
+  const queryClient = useQueryClient();
   const { isChangingView, setViewLoaded } = useView();
   const positionData: PositionDataView | undefined = useMemo(
     () => vault?.positionData,
@@ -71,6 +75,8 @@ export default function PositionView() {
     }
     setAmount("");
     setOperation(null);
+    // Invalidate and refetch vault data
+    queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
   };
 
   const handleMaxClick = () => {

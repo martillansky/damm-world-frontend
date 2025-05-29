@@ -6,6 +6,8 @@ import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
 import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
 import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
+import { useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
@@ -21,7 +23,9 @@ import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function VaultView() {
+  const { address } = useParams();
   const { vault, isLoading } = useVault();
+  const queryClient = useQueryClient();
   const { isChangingView, setViewLoaded } = useView();
   const vaultData: VaultDataView | undefined = useMemo(
     () => vault?.vaultData,
@@ -94,6 +98,8 @@ export default function VaultView() {
     }
     setAmount("");
     setOperation(null);
+    // Invalidate and refetch vault data
+    queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
   };
 
   const handleMaxClick = () => {

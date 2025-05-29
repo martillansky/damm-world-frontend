@@ -2,6 +2,8 @@ import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { Transaction } from "@/lib/api/types/VaultData.types";
 import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
+import { useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import CheckIcon from "./icons/CheckIcon";
 import CloseIcon from "./icons/CloseIcon";
@@ -11,7 +13,9 @@ import LoadingComponent from "./ui/common/LoadingComponent";
 import Toast, { ToastType } from "./ui/common/Toast";
 
 export default function ActivityView() {
+  const { address } = useParams();
   const { vault, isLoading } = useVault();
+  const queryClient = useQueryClient();
   const { cancelDepositRequest } = useDeposit();
   const { isChangingView, setViewLoaded } = useView();
   const [filter, setFilter] = useState("all");
@@ -33,6 +37,9 @@ export default function ActivityView() {
     setToastMessage("Deposit request successfully canceled!");
     setToastType("success");
     setShowToast(true);
+
+    // Invalidate and refetch vault data
+    queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
   };
 
   useEffect(() => {

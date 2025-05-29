@@ -20,7 +20,7 @@ export function useGetVaultDataDirectly() {
   const { getRedeemableAssets } = useRedeemableAssets();
   const { getRecentTxs } = useRetrieveTxs();
   const wldConversionRate = 1.4;
-  let formattedTVL = 0;
+  let tvlUSD = 0;
   let redeemableAssets = 0;
   let sharesReadyToClaim = 0;
   let position = 0;
@@ -29,8 +29,8 @@ export function useGetVaultDataDirectly() {
 
   const getVaultData = async (): Promise<VaultData> => {
     try {
-      const tvl = await getTVL();
-      formattedTVL = Number(tvl) * wldConversionRate;
+      const tvl = Number(await getTVL());
+      tvlUSD = tvl * wldConversionRate;
       userBalance = Number(await getBalanceOf());
       sharesReadyToClaim = Number(await getSharesReadyToClaim());
       redeemableAssets = Number(await getRedeemableAssets());
@@ -44,7 +44,7 @@ export function useGetVaultDataDirectly() {
       throw error;
     }
     return {
-      tvl: formattedTVL,
+      tvl: tvlUSD,
       tvlChange: 2.21,
       apr: 0,
       aprChange: 0,
@@ -63,7 +63,7 @@ export function useGetVaultDataDirectly() {
       usdcBalance: 0,
       availableToRedeem: redeemableAssets,
       availableToRedeemUSD: redeemableAssets * wldConversionRate,
-      vaultShare: formattedTVL > 0 ? (positionUSD * 100) / formattedTVL : 0,
+      vaultShare: tvlUSD > 0 ? (positionUSD * 100) / tvlUSD : 0,
       claimableShares: sharesReadyToClaim,
       sharesInWallet: userBalance,
     };

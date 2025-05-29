@@ -32,7 +32,7 @@ export function ViewProvider({ children }: ViewProviderProps) {
   // Set view to vault when wallet changes
   useEffect(() => {
     if (address) {
-      setView("vault");
+      handleViewChange("vault");
     }
   }, [address]);
 
