@@ -39,7 +39,7 @@ export function useRetrieveTxs() {
     };
   };
 
-  const getRecentTxs = async (count = 20) => {
+  const getRecentTxs = async (count = 50) => {
     const provider = getEthersProvider();
     const { vault } = await getSignerAndContract(
       network.chainId?.toString() ?? ""
@@ -74,21 +74,26 @@ export function useRetrieveTxs() {
             isCanceled: boolean;
           }> => {
             if (parsedTx.functionName === "requestDeposit") {
-              const logs = await vault.queryFilter(
+              const logsSettleDeposit = await vault.queryFilter(
                 filterSettleDepositEvents,
                 tx.blockNumber ? tx.blockNumber + 1 : 0
               );
-              if (logs.length > 0) {
+              const logsCancelDeposit = await vault.queryFilter(
+                filterCanceledDepositEvents,
+                tx.blockNumber ? tx.blockNumber + 1 : 0
+              );
+              if (logsSettleDeposit.length > 0) {
+                if (
+                  logsCancelDeposit.length > 0 &&
+                  logsSettleDeposit[0].blockNumber >
+                    logsCancelDeposit[0].blockNumber
+                ) {
+                  return { isSettled: false, isCanceled: true };
+                }
                 return { isSettled: true, isCanceled: false };
               } else {
-                const logs = await vault.queryFilter(
-                  filterCanceledDepositEvents,
-                  tx.blockNumber ? tx.blockNumber + 1 : 0
-                );
-                if (logs.length > 0) {
+                if (logsCancelDeposit.length > 0) {
                   return { isSettled: false, isCanceled: true };
-                } else {
-                  return { isSettled: false, isCanceled: false };
                 }
               }
             } else if (parsedTx.functionName === "requestRedeem") {
@@ -98,8 +103,6 @@ export function useRetrieveTxs() {
               );
               if (logs.length > 0) {
                 return { isSettled: true, isCanceled: false };
-              } else {
-                return { isSettled: false, isCanceled: false };
               }
             }
 

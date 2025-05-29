@@ -34,7 +34,11 @@ export function useGetVaultDataDirectly() {
       userBalance = Number(await getBalanceOf());
       sharesReadyToClaim = Number(await getSharesReadyToClaim());
       redeemableAssets = Number(await getRedeemableAssets());
-      position = userBalance + sharesReadyToClaim + redeemableAssets;
+
+      // TODO: Revise if redeemableAssets is part of the position. Lagoon
+      // suggests this is so although it seems to be not the case, specially
+      // for calculating the rate of the share.
+      position = userBalance + sharesReadyToClaim; // + redeemableAssets;
       positionUSD = position * wldConversionRate;
     } catch (error) {
       throw error;
@@ -117,7 +121,9 @@ export function useGetVaultDataDirectly() {
 
   const getVaultDataDirectly = async (): Promise<VaultDataResponse> => {
     try {
+      // Uncomment to test with mocked data
       //throw new Error("test");
+
       const vaultData = await getVaultData();
       const positionData = await getPositionData();
       const activityData = await getActivityData();
