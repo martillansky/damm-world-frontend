@@ -79,7 +79,6 @@ export function useRetrieveTxs() {
                 tx.blockNumber ? tx.blockNumber + 1 : 0
               );
               if (logs.length > 0) {
-                console.log("SettleDeposit event detected.", logs);
                 return { isSettled: true, isCanceled: false };
               } else {
                 const logs = await vault.queryFilter(
@@ -87,7 +86,6 @@ export function useRetrieveTxs() {
                   tx.blockNumber ? tx.blockNumber + 1 : 0
                 );
                 if (logs.length > 0) {
-                  console.log("DepositRequestCanceled event detected.", logs);
                   return { isSettled: false, isCanceled: true };
                 } else {
                   return { isSettled: false, isCanceled: false };
@@ -99,7 +97,6 @@ export function useRetrieveTxs() {
                 tx.blockNumber ? tx.blockNumber + 1 : 0
               );
               if (logs.length > 0) {
-                console.log("SettleRedeem event detected.", logs);
                 return { isSettled: true, isCanceled: false };
               } else {
                 return { isSettled: false, isCanceled: false };
@@ -126,7 +123,6 @@ export function useRetrieveTxs() {
         })
       );
 
-      //const validTxs = parsedTxs;
       const validTxs = parsedTxs.filter(
         (tx) =>
           tx.functionName === "deposit" ||
@@ -137,7 +133,6 @@ export function useRetrieveTxs() {
 
       txs.push(...validTxs);
     }
-    console.log("parsedTxs", txs);
     return txs;
   };
   return { getRecentTxs };

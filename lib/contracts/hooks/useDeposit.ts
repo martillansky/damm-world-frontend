@@ -1,17 +1,17 @@
 import { TransactionResponse } from "@ethersproject/providers";
 import { useAppKitNetwork } from "@reown/appkit/react";
-import { Contract } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { useAccount } from "wagmi";
-import { getSignerAndContract, getVaultAddress } from "../utils/utils";
+import { getSignerAndContract } from "../utils/utils";
 
 async function _handleApprove(
   chainId: string,
   address: string,
-  underlyingToken: Contract,
+  vaultAddress: string,
   amount: string
 ) {
-  const vaultAddress = getVaultAddress(chainId);
+  const { underlyingToken } = await getSignerAndContract(chainId);
+
   const amountInWei = parseEther(amount);
 
   const allowance = await underlyingToken.allowance(address, vaultAddress);
@@ -41,9 +41,9 @@ export function useDeposit() {
     if (!address) throw new Error("No address found");
 
     const chainId = network.chainId?.toString() ?? "";
-    const { vault, underlyingToken } = await getSignerAndContract(chainId);
+    const { vault } = await getSignerAndContract(chainId);
 
-    await _handleApprove(chainId, address, underlyingToken, amount);
+    await _handleApprove(chainId, address, vault.address, amount);
     const tx = await vault["requestDeposit(uint256,address,address,address)"](
       parseEther(amount),
       address,

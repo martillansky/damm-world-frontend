@@ -1,28 +1,13 @@
 import {
   IERC20__factory,
-  //MockToken__factory,
+  MockToken__factory,
   Vault__factory,
   VaultForked__factory,
 } from "@/lib/contracts/types";
-import { anvil } from "@/lib/reown/chains";
+import { getTypedChainId } from "@/lib/utils/chain";
+import { getEnvVars } from "@/lib/utils/env";
 import { TransactionResponse } from "@ethersproject/providers";
 import { ethers, Signer } from "ethers";
-
-export function getVaultAddress(chainId: string): string {
-  if (chainId === anvil.id.toString()) {
-    //return process.env.NEXT_PUBLIC_VAULT_ADDRESS!; // ANVIL
-    return process.env.NEXT_PUBLIC_FORKED_VAULT_ADDRESS_WC!; // FORKED WORLDCHAIN
-  }
-  return process.env.NEXT_PUBLIC_BASE_SEPOLIA_VAULT_ADDRESS!;
-}
-
-export function getUnderlyingTokenAddress(chainId: string): string {
-  if (chainId === anvil.id.toString()) {
-    //return process.env.NEXT_PUBLIC_ANVIL_UNDERLYING_TOKEN!; // ANVIL
-    return process.env.NEXT_PUBLIC_FORKED_UNDERLYING_TOKEN_ADDRESS_WC!; // FORKED WORLDCHAIN
-  }
-  return process.env.NEXT_PUBLIC_BASE_SEPOLIA_UNDERLYING_TOKEN!;
-}
 
 export function toBytes(hex: string): string {
   return hex.startsWith("0x") ? hex : `0x${hex}`;
@@ -31,22 +16,19 @@ export function toBytes(hex: string): string {
 export async function getSignerAndContract(chainId: string) {
   const signer: Signer = getSigner();
   if (!signer) throw new Error("Signer not found");
+  const typedChain = getTypedChainId(Number(chainId));
+  const { VAULT_ADDRESS, UNDERLYING_TOKEN, ANVIL_FORKED } =
+    getEnvVars(typedChain);
 
   let vault;
-  if (chainId === anvil.id.toString()) {
-    vault = VaultForked__factory.connect(getVaultAddress(chainId), signer);
+  let underlyingToken;
+  if (typedChain === 31337 && !ANVIL_FORKED) {
+    vault = Vault__factory.connect(VAULT_ADDRESS!, signer);
+    underlyingToken = MockToken__factory.connect(UNDERLYING_TOKEN!, signer);
   } else {
-    vault = Vault__factory.connect(getVaultAddress(chainId), signer);
+    vault = VaultForked__factory.connect(VAULT_ADDRESS!, signer);
+    underlyingToken = IERC20__factory.connect(UNDERLYING_TOKEN!, signer);
   }
-  /* const underlyingToken = MockToken__factory.connect(
-    getUnderlyingTokenAddress(chainId),
-    signer
-  ); */
-
-  const underlyingToken = IERC20__factory.connect(
-    getUnderlyingTokenAddress(chainId),
-    signer
-  );
 
   return {
     signer,

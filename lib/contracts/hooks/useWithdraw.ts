@@ -7,11 +7,6 @@ import { getSignerAndContract } from "../utils/utils";
 export function useWithdraw() {
   const { address } = useAccount();
   const network = useAppKitNetwork();
-  const safeAddress = process.env.NEXT_PUBLIC_ANVIL_SAFE_ADDRESS;
-  const controller = process.env.NEXT_PUBLIC_ANVIL_CONTROLLER;
-
-  if (!safeAddress || !controller)
-    throw new Error("Safe address or controller not found");
 
   const submitRedeem = async (amount: string) => {
     if (!address) throw new Error("No address found");
