@@ -5,6 +5,7 @@ export interface TransactionView {
   status: string;
   timestamp: string;
   txHash: string;
+  txHashShort: string;
   value: string;
 }
 

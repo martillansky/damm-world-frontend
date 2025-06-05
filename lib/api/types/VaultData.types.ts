@@ -1,3 +1,22 @@
+export interface ActivityDataApiResponse {
+  vault_id: number;
+  block: number;
+  log_index: number;
+  tx_hash: string;
+  sender: string;
+  receiver: string;
+  owner: string;
+  assets: number;
+  shares: number;
+  timestamp: string;
+  chain_id: number;
+  vault_name: string;
+  vault_address: string;
+  vault_symbol: string;
+  deposit_symbol: string;
+  source_table: string;
+  status: string;
+}
 export interface Transaction {
   id: string;
   type: string;
@@ -5,6 +24,7 @@ export interface Transaction {
   status: string;
   timestamp: string;
   txHash: string;
+  txHashShort: string;
   value: string;
 }
 

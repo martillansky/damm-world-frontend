@@ -66,6 +66,7 @@ export function transformActivityData(
     status: activity.status,
     timestamp: activity.timestamp,
     txHash: activity.txHash,
+    txHashShort: activity.txHashShort,
     value: activity.value,
   }));
 }

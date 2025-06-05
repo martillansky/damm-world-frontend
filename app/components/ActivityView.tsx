@@ -2,6 +2,9 @@ import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { Transaction } from "@/lib/api/types/VaultData.types";
 import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
+import { getTypedChainId } from "@/lib/utils/chain";
+import { getEnvVars } from "@/lib/utils/env";
+import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -14,6 +17,7 @@ import Toast, { ToastType } from "./ui/common/Toast";
 
 export default function ActivityView() {
   const { address } = useParams();
+  const { chainId } = useAppKitNetwork();
   const { vault, isLoading } = useVault();
   const queryClient = useQueryClient();
   const { cancelDepositRequest } = useDeposit();
@@ -118,46 +122,53 @@ export default function ActivityView() {
               return tx.type === "sent" || tx.type === "received";
             return true;
           })
-          .map((tx) => (
-            <div
-              key={tx.id}
-              className="flex items-center space-x-3 py-2 border-b border-border-light dark:border-border last:border-0"
-            >
-              <div className="w-8 flex items-center justify-center">
-                {getActionButton(tx)}
-              </div>
-              <div className="flex-1 grid grid-cols-5 gap-4 items-center">
-                <div className="flex items-center space-x-2">
-                  <p className="font-medium text-xs">
-                    {getTransactionType(tx.type)} #{tx.id}
-                  </p>
+          .map((tx) => {
+            const explorerLink = `${
+              getEnvVars(getTypedChainId(chainId as number))
+                .BLOCK_EXPLORER_GATEWAY
+            }/tx/${tx.txHash}`;
+
+            return (
+              <div
+                key={tx.id}
+                className="flex items-center space-x-3 py-2 border-b border-border-light dark:border-border last:border-0"
+              >
+                <div className="w-8 flex items-center justify-center">
+                  {getActionButton(tx)}
                 </div>
-                <div className="flex items-center">
-                  <p className="text-xs text-muted-light dark:text-muted">
-                    {tx.amount}
-                  </p>
-                </div>
-                <div className="col-span-2 flex items-center justify-center">
-                  <a
-                    href={`https://etherscan.io/tx/${tx.txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-lime-400 hover:underline drop-shadow-[0_0_1px_rgba(163,230,53,0.3)]"
-                  >
-                    {tx.txHash}
-                  </a>
-                </div>
-                <div className="flex items-center justify-end space-x-4">
-                  <p className="text-xs text-muted-light dark:text-muted">
-                    {tx.timestamp}
-                  </p>
-                  <div className="w-4 h-4 flex items-center justify-center">
-                    {getStatusIcon(tx.status)}
+                <div className="flex-1 grid grid-cols-5 gap-4 items-center">
+                  <div className="flex items-center space-x-2">
+                    <p className="font-medium text-xs">
+                      {getTransactionType(tx.type)} #{tx.id}
+                    </p>
+                  </div>
+                  <div className="flex items-center">
+                    <p className="text-xs text-muted-light dark:text-muted">
+                      {tx.amount}
+                    </p>
+                  </div>
+                  <div className="col-span-2 flex items-center justify-center">
+                    <a
+                      href={explorerLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-lime-400 hover:underline drop-shadow-[0_0_1px_rgba(163,230,53,0.3)]"
+                    >
+                      {tx.txHashShort}
+                    </a>
+                  </div>
+                  <div className="flex items-center justify-end space-x-4">
+                    <p className="text-xs text-muted-light dark:text-muted">
+                      {tx.timestamp}
+                    </p>
+                    <div className="w-4 h-4 flex items-center justify-center">
+                      {getStatusIcon(tx.status)}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
       </div>
     );
   };

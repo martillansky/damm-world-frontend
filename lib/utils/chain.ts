@@ -1,10 +1,11 @@
-const CHAINS = [31337, 84532] as const;
-export type SupportedChainId = (typeof CHAINS)[number];
+import { SupportedChainId, supportedChainsObject } from "../reown";
 
 export function getTypedChainId(chainId?: number): SupportedChainId {
   if (!chainId) throw new Error("Missing chain ID");
 
-  if (!CHAINS.includes(chainId as SupportedChainId)) {
+  if (
+    !Object.values(supportedChainsObject).some((chain) => chain.id === chainId)
+  ) {
     throw new Error(`Unsupported chain ID: ${chainId}`);
   }
 

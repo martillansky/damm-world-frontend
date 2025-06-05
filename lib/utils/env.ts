@@ -1,7 +1,7 @@
-import { SupportedChainId } from "./chain";
+import { SupportedChainId, supportedChainsObject } from "../reown";
 
-type ChainEnvKeys = {
-  [K in SupportedChainId]: K extends 31337
+export type ChainEnvKeys = {
+  [K in SupportedChainId]: K extends typeof supportedChainsObject.anvil.id
     ? {
         local: Record<keyof ChainEnvSchema, string>;
         forked: Record<keyof ChainEnvSchema, string>;
@@ -13,12 +13,15 @@ type GlobalEnvSchema = {
   WALLET_CONNECT_PROJECT_ID: string;
   INFURA_API_KEY: string;
   ANVIL_FORKED: boolean;
+  API_GATEWAY: string;
+  ENVIRONMENT: string;
 };
 
 type ChainEnvSchema = {
   VAULT_ADDRESS: string;
   UNDERLYING_TOKEN: string;
   RPC_URL: string;
+  BLOCK_EXPLORER_GATEWAY: string;
 };
 
 const GLOBAL_ENV_KEYS = {
@@ -26,19 +29,28 @@ const GLOBAL_ENV_KEYS = {
     process.env["NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID"],
   INFURA_API_KEY: process.env["NEXT_PUBLIC_INFURA_API_KEY"],
   ANVIL_FORKED: process.env["NEXT_PUBLIC_ANVIL_FORKED"] === "true",
+  API_GATEWAY:
+    process.env["NEXT_PUBLIC_ENVIRONMENT"] === "development"
+      ? process.env["NEXT_PUBLIC_API_GATEWAY_LOCAL"]
+      : process.env["NEXT_PUBLIC_API_GATEWAY_PRODUCTION"],
+  ENVIRONMENT: process.env["NEXT_PUBLIC_ENVIRONMENT"],
 };
 
 const CHAIN_ENV_KEYS: ChainEnvKeys = {
-  84532: {
+  [supportedChainsObject.baseSepolia.id]: {
     VAULT_ADDRESS: process.env["NEXT_PUBLIC_BASE_SEPOLIA_VAULT_ADDRESS"]!,
     UNDERLYING_TOKEN: process.env["NEXT_PUBLIC_BASE_SEPOLIA_UNDERLYING_TOKEN"]!,
     RPC_URL: process.env["NEXT_PUBLIC_RPC_BASE_SEPOLIA"]!,
+    BLOCK_EXPLORER_GATEWAY:
+      process.env["NEXT_PUBLIC_BLOCK_EXPLORER_GATEWAY_BASE_SEPOLIA"]!,
   },
-  31337: {
+  [supportedChainsObject.anvil.id]: {
     local: {
       VAULT_ADDRESS: process.env["NEXT_PUBLIC_VAULT_ADDRESS"]!,
       UNDERLYING_TOKEN: process.env["NEXT_PUBLIC_ANVIL_UNDERLYING_TOKEN"]!,
       RPC_URL: process.env["NEXT_PUBLIC_RPC_ANVIL"]!,
+      BLOCK_EXPLORER_GATEWAY:
+        process.env["NEXT_PUBLIC_BLOCK_EXPLORER_GATEWAY_ANVIL"]!,
     },
     forked: {
       // WORLDCHAIN FORKED ON ANVIL
@@ -46,7 +58,16 @@ const CHAIN_ENV_KEYS: ChainEnvKeys = {
       UNDERLYING_TOKEN:
         process.env["NEXT_PUBLIC_FORKED_UNDERLYING_TOKEN_ADDRESS_WC"]!,
       RPC_URL: process.env["NEXT_PUBLIC_RPC_WC"]!,
+      BLOCK_EXPLORER_GATEWAY:
+        process.env["NEXT_PUBLIC_BLOCK_EXPLORER_GATEWAY_WC"]!,
     },
+  },
+  [supportedChainsObject.base.id]: {
+    VAULT_ADDRESS: process.env["NEXT_PUBLIC_BASE_VAULT_ADDRESS"]!,
+    UNDERLYING_TOKEN: process.env["NEXT_PUBLIC_BASE_UNDERLYING_TOKEN"]!,
+    RPC_URL: process.env["NEXT_PUBLIC_RPC_BASE"]!,
+    BLOCK_EXPLORER_GATEWAY:
+      process.env["NEXT_PUBLIC_BLOCK_EXPLORER_GATEWAY_BASE"]!,
   },
 };
 
@@ -66,7 +87,7 @@ function getChainEnvVars(
 ): ChainEnvSchema {
   const envKeys = CHAIN_ENV_KEYS[chainId];
   const keys =
-    chainId === 31337
+    chainId === supportedChainsObject.anvil.id
       ? (
           envKeys as {
             local: Record<keyof ChainEnvSchema, string>;

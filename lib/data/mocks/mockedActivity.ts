@@ -8,6 +8,7 @@ export const mockedActivity: Transaction[] = [
     status: "waiting_settlement",
     timestamp: "2h ago",
     txHash: "0x1234...5678",
+    txHashShort: "0x1234...5678",
     value: "+$103.00",
   },
   {
@@ -17,6 +18,7 @@ export const mockedActivity: Transaction[] = [
     status: "settled",
     timestamp: "5h ago",
     txHash: "0x8765...4321",
+    txHashShort: "0x8765...4321",
     value: "+$154.50",
   },
   {
@@ -26,6 +28,7 @@ export const mockedActivity: Transaction[] = [
     status: "waiting_settlement",
     timestamp: "1d ago",
     txHash: "0x9876...5432",
+    txHashShort: "0x9876...5432",
     value: "-$206.00",
   },
   {
@@ -35,6 +38,7 @@ export const mockedActivity: Transaction[] = [
     status: "settled",
     timestamp: "2d ago",
     txHash: "0x2468...1357",
+    txHashShort: "0x2468...1357",
     value: "-$51.50",
   },
   {
@@ -44,6 +48,7 @@ export const mockedActivity: Transaction[] = [
     status: "completed",
     timestamp: "3h ago",
     txHash: "0x2468...1357",
+    txHashShort: "0x2468...1357",
     value: "+$51.50",
   },
   {
@@ -53,6 +58,7 @@ export const mockedActivity: Transaction[] = [
     status: "completed",
     timestamp: "6h ago",
     txHash: "0x1357...2468",
+    txHashShort: "0x1357...2468",
     value: "-$82.40",
   },
   {
@@ -62,6 +68,7 @@ export const mockedActivity: Transaction[] = [
     status: "completed",
     timestamp: "1d ago",
     txHash: "0x1357...2468",
+    txHashShort: "0x1357...2468",
     value: "-$30.90",
   },
   {
@@ -71,6 +78,7 @@ export const mockedActivity: Transaction[] = [
     status: "completed",
     timestamp: "4h ago",
     txHash: "0x7890...1234",
+    txHashShort: "0x7890...1234",
     value: "-$61.80",
   },
   {
@@ -80,6 +88,7 @@ export const mockedActivity: Transaction[] = [
     status: "completed",
     timestamp: "7h ago",
     txHash: "0x7891...5678",
+    txHashShort: "0x7891...5678",
     value: "+$92.70",
   },
   {
@@ -89,6 +98,7 @@ export const mockedActivity: Transaction[] = [
     status: "failed",
     timestamp: "3h ago",
     txHash: "0x7892...1234",
+    txHashShort: "0x7892...1234",
     value: "+$123.60",
   },
   {
@@ -98,6 +108,7 @@ export const mockedActivity: Transaction[] = [
     status: "waiting_settlement",
     timestamp: "1h ago",
     txHash: "0x7893...5678",
+    txHashShort: "0x7893...5678",
     value: "+$72.10",
   },
   {
@@ -107,6 +118,7 @@ export const mockedActivity: Transaction[] = [
     status: "waiting_settlement",
     timestamp: "2h ago",
     txHash: "0x7894...9012",
+    txHashShort: "0x7894...9012",
     value: "-$164.80",
   },
   {
@@ -116,6 +128,7 @@ export const mockedActivity: Transaction[] = [
     status: "completed",
     timestamp: "4h ago",
     txHash: "0x7895...3456",
+    txHashShort: "0x7895...3456",
     value: "+$41.20",
   },
   {
@@ -125,6 +138,7 @@ export const mockedActivity: Transaction[] = [
     status: "completed",
     timestamp: "8h ago",
     txHash: "0x7896...7890",
+    txHashShort: "0x7896...7890",
     value: "-$113.30",
   },
   {
@@ -134,6 +148,7 @@ export const mockedActivity: Transaction[] = [
     status: "completed",
     timestamp: "5h ago",
     txHash: "0x7897...2345",
+    txHashShort: "0x7897...2345",
     value: "-$51.50",
   },
   {
@@ -143,6 +158,7 @@ export const mockedActivity: Transaction[] = [
     status: "completed",
     timestamp: "6h ago",
     txHash: "0x7898...6789",
+    txHashShort: "0x7898...6789",
     value: "+$82.40",
   },
   {
@@ -152,6 +168,7 @@ export const mockedActivity: Transaction[] = [
     status: "settled",
     timestamp: "1d ago",
     txHash: "0x7899...0123",
+    txHashShort: "0x7899...0123",
     value: "+$185.40",
   },
   {
@@ -161,6 +178,7 @@ export const mockedActivity: Transaction[] = [
     status: "settled",
     timestamp: "2d ago",
     txHash: "0x7900...4567",
+    txHashShort: "0x7900...4567",
     value: "-$92.70",
   },
   {
@@ -170,6 +188,7 @@ export const mockedActivity: Transaction[] = [
     status: "completed",
     timestamp: "3d ago",
     txHash: "0x7901...8901",
+    txHashShort: "0x7901...8901",
     value: "-$61.80",
   },
   {
@@ -179,6 +198,7 @@ export const mockedActivity: Transaction[] = [
     status: "failed",
     timestamp: "4h ago",
     txHash: "0x7902...2345",
+    txHashShort: "0x7902...2345",
     value: "+$144.20",
   },
 ];

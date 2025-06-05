@@ -1,8 +1,6 @@
 "use client";
 
-import { projectId, wagmiAdapter } from "@/lib/reown";
-import { anvil } from "@/lib/reown/chains";
-import { baseSepolia } from "@reown/appkit/networks";
+import { defaultNetwork, networks, projectId, wagmiAdapter } from "@/lib/reown";
 import { createAppKit } from "@reown/appkit/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -35,8 +33,8 @@ const metadata = {
 createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks: [baseSepolia, anvil],
-  defaultNetwork: anvil, //baseSepolia,
+  networks: networks,
+  defaultNetwork: defaultNetwork,
   metadata: metadata,
   features: {
     analytics: true,
