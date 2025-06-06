@@ -1,4 +1,6 @@
 import ContextProvider from "@/context";
+import { getEnvVars } from "@/lib/utils/env";
+import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
@@ -32,11 +34,21 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className="dark">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ContextProvider cookies={cookies}>{children}</ContextProvider>
-      </body>
+      {getEnvVars().ACTIVE_MINIAPP ? (
+        <MiniKitProvider>
+          <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          >
+            <ContextProvider cookies={cookies}>{children}</ContextProvider>
+          </body>
+        </MiniKitProvider>
+      ) : (
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          <ContextProvider cookies={cookies}>{children}</ContextProvider>
+        </body>
+      )}
     </html>
   );
 }

@@ -15,6 +15,7 @@ type GlobalEnvSchema = {
   ANVIL_FORKED: boolean;
   API_GATEWAY: string;
   ENVIRONMENT: string;
+  ACTIVE_MINIAPP: boolean;
 };
 
 type ChainEnvSchema = {
@@ -34,6 +35,7 @@ const GLOBAL_ENV_KEYS = {
       ? process.env["NEXT_PUBLIC_API_GATEWAY_LOCAL"]
       : process.env["NEXT_PUBLIC_API_GATEWAY_PRODUCTION"],
   ENVIRONMENT: process.env["NEXT_PUBLIC_ENVIRONMENT"],
+  ACTIVE_MINIAPP: process.env["NEXT_PUBLIC_ACTIVATE_MINIAPP"] === "true",
 };
 
 const CHAIN_ENV_KEYS: ChainEnvKeys = {

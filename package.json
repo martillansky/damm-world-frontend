@@ -12,14 +12,15 @@
     "typechain": "typechain --target ethers-v5 --out-dir lib/contracts/types lib/contracts/abis/*.json"
   },
   "dependencies": {
-    "autoprefixer": "^10.4.14",
     "@heroicons/react": "^2.2.0",
     "@reown/appkit": "^1.7.2",
     "@reown/appkit-adapter-wagmi": "^1.7.2",
     "@tanstack/react-query": "^5.72.1",
+    "@worldcoin/minikit-js": "^1.9.5",
+    "autoprefixer": "^10.4.14",
     "ethers": "5",
-    "postcss": "^8.4.24",
     "next": "15.3.2",
+    "postcss": "^8.4.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "wagmi": "^2.14.16"
