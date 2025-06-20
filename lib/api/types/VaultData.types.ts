@@ -16,6 +16,7 @@ export interface ActivityDataApiResponse {
   deposit_symbol: string;
   source_table: string;
   status: string;
+  return_type: string;
 }
 export interface Transaction {
   id: string;

@@ -13,35 +13,44 @@ import {
 const convertActivityData = (
   activityData: Array<ActivityDataApiResponse>
 ): Transaction[] => {
-  return activityData.map((tx) => {
-    const rawAmountWei = tx.assets ? tx.assets : tx.shares;
-    const rawAmount = (Number(rawAmountWei) / 10 ** 18).toString();
-    const amount = rawAmount;
-    const value = rawAmount;
-    const sourceTable = {
-      lagoon_depositrequest: "deposit",
-      lagoon_redeemrequest: "redeem",
-      lagoon_withdraw: "withdraw",
-      lagoon_transfer: "transfer",
-    };
+  return activityData
+    .map((tx) => {
+      if (tx.return_type && tx.return_type === "deposit") return;
+      const rawAmountWei = tx.assets ? tx.assets : tx.shares;
+      const decimals = tx.assets ? 6 : 18;
+      const rawAmount = (Number(rawAmountWei) / 10 ** decimals).toString();
+      const amount = rawAmount;
+      const value = rawAmount;
+      const sourceTable = {
+        deposit_requests: "deposit",
+        redeem_requests: "redeem",
+        vault_returns: "vault_returns",
+        //withdraw: "withdraw",
+        transfer: "transfer",
+      };
 
-    const status = tx.status ? tx.status : "completed";
-    const timestamp = formatTimestamp(new Date(tx.timestamp).getTime() / 1000);
-    const txHash = tx.tx_hash.slice(0, 6) + "..." + tx.tx_hash.slice(-4);
-    const id = tx.block.toString();
-    const type = sourceTable[tx.source_table as keyof typeof sourceTable];
+      const status = tx.status ? tx.status : "completed";
+      const timestamp = formatTimestamp(
+        new Date(tx.timestamp).getTime() / 1000
+      );
+      const txHash = tx.tx_hash.slice(0, 6) + "..." + tx.tx_hash.slice(-4);
+      const id = tx.block.toString();
+      const type = tx.return_type
+        ? tx.return_type
+        : sourceTable[tx.source_table as keyof typeof sourceTable];
 
-    return {
-      id: id,
-      type: type,
-      amount: amount,
-      status: status,
-      timestamp: timestamp,
-      txHash: tx.tx_hash,
-      txHashShort: txHash,
-      value: value,
-    };
-  });
+      return {
+        id: id,
+        type: type,
+        amount: amount,
+        status: status,
+        timestamp: timestamp,
+        txHash: tx.tx_hash,
+        txHashShort: txHash,
+        value: value,
+      };
+    })
+    .filter((tx): tx is Transaction => tx !== undefined);
 };
 
 export function useVaultData(wallet: string) {
