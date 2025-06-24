@@ -57,3 +57,8 @@ export interface VaultDataResponse {
   positionData: PositionData;
   activityData: Transaction[];
 }
+
+export interface IntegratedDataResponse {
+  vaultData: VaultData;
+  positionData: PositionData;
+}

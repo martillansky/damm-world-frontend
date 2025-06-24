@@ -40,7 +40,7 @@ export default function VaultView() {
     null
   );
   const [amount, setAmount] = useState("");
-  const { getUnderlyingBalanceOf, getBalanceOf } = useBalanceOf();
+  const { getBalanceOf } = useBalanceOf();
   const [walletBalance, setWalletBalance] = useState<string>("");
   const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
     useState<string>("");
@@ -107,12 +107,9 @@ export default function VaultView() {
   };
 
   useEffect(() => {
-    const fetchWalletBalance = async () => {
-      const balance = await getUnderlyingBalanceOf();
-      setWalletBalance(balance);
-    };
-    fetchWalletBalance();
-  }, [getUnderlyingBalanceOf]);
+    const walletBalance = vault?.positionData?.sharesInWallet;
+    setWalletBalance(walletBalance?.toString() ?? "0");
+  }, [vault?.positionData?.sharesInWallet]);
 
   useEffect(() => {
     const fetchSharesReadyToWithdraw = async () => {
@@ -156,8 +153,8 @@ export default function VaultView() {
             secondaryRight={vaultData.tvlChange}
           />
           <CardRow
-            left="APR (7 day avg)"
-            tooltip="Average annual percentage rate based on the last 7 days of performance."
+            left="APY (12h avg)"
+            tooltip="Average annual percentage rate based on the last 12 hours of performance."
             highlightedRight
             right={vaultData.apr}
             secondaryRight={vaultData.aprChange}
