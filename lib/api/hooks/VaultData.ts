@@ -29,7 +29,13 @@ const convertActivityData = (
         transfer: "transfer",
       };
 
-      const status = tx.status ? tx.status : "completed";
+      const status = tx.status
+        ? tx.status === "pending"
+          ? "waiting_settlement"
+          : tx.status === "canceled"
+          ? "failed"
+          : tx.status
+        : "completed";
       const timestamp = formatTimestamp(
         new Date(tx.timestamp).getTime() / 1000
       );

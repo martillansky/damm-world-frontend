@@ -41,7 +41,7 @@ export function useWithdraw() {
 
     const amountInWei = parseEther(amount);
 
-    const tx = await vault.requestRedeem(amountInWei, address, address);
+    const tx = await vault.claimSharesAndRequestRedeem(amountInWei);
     return tx as unknown as TransactionResponse;
   };
 

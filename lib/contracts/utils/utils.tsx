@@ -8,6 +8,7 @@ import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { TransactionResponse } from "@ethersproject/providers";
 import { ethers, Signer } from "ethers";
+import { getTokenMetadata, TokenMetadata } from "./TokenMetadata";
 
 export function toBytes(hex: string): string {
   return hex.startsWith("0x") ? hex : `0x${hex}`;
@@ -30,10 +31,18 @@ export async function getSignerAndContract(chainId: string) {
     underlyingToken = IERC20__factory.connect(UNDERLYING_TOKEN!, signer);
   }
 
+  // Get provider and token metadata
+  const provider = getEthersProvider();
+  const tokenMetadata: TokenMetadata = await getTokenMetadata(
+    UNDERLYING_TOKEN!,
+    provider as ethers.providers.Web3Provider
+  );
+
   return {
     signer,
     vault,
     underlyingToken,
+    tokenMetadata,
   };
 }
 

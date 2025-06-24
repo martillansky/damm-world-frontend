@@ -17,14 +17,14 @@ export function useBalanceOf() {
   const getUnderlyingBalanceOf = async () => {
     if (!address) throw new Error("No address found");
 
-    const { underlyingToken } = await getSignerAndContract(
+    const { underlyingToken, tokenMetadata } = await getSignerAndContract(
       network.chainId?.toString() ?? ""
     );
 
     // These are the underlying tokens user has on his wallet
     const balance = await underlyingToken.balanceOf(address);
 
-    return formatUnits(balance, 18);
+    return formatUnits(balance, tokenMetadata.decimals);
   };
 
   const getBalanceOf = async () => {
