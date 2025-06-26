@@ -10,8 +10,9 @@ export default function WalletView() {
   const router = useRouter();
   const { isConnected } = useAppKitAccount();
 
-  // Redirect to vaults page
   useEffect(() => {
+    if (!router || address === undefined) return;
+
     if (!isConnected) {
       router.push("/");
     } else {
@@ -19,7 +20,6 @@ export default function WalletView() {
     }
   }, [isConnected, router, address]);
 
-  // Show loading state while redirecting
   return (
     <LoadingComponent
       text={

@@ -11,12 +11,14 @@ export default function WalletPage() {
 
   // Redirect to vaults page
   useEffect(() => {
+    if (!router || address === undefined) return;
+
     if (!isConnected) {
       router.push("/");
     } else {
       router.push(`/wallet/${address}`);
     }
-  }, [isConnected, router]);
+  }, [isConnected, router, address]);
 
   // Show loading state while redirecting
   return (

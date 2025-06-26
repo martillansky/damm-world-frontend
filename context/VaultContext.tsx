@@ -29,16 +29,13 @@ export function VaultProvider({ children }: VaultProviderProps) {
   const [vault, setVault] = useState<DataPresenter | null>(null);
   const { data, isLoading } = useVaultData(address ?? "");
 
-  // Reset vault state when wallet changes
   useEffect(() => {
-    setVault(null);
-  }, [address]);
-
-  useEffect(() => {
-    if (data && address) {
+    if (isLoading || !address) {
+      setVault(null);
+    } else if (data && address) {
       setVault(DataWrangler({ data }));
     }
-  }, [data, address]);
+  }, [isLoading, data, address]);
 
   return (
     <VaultContext.Provider

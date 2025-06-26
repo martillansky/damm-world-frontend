@@ -173,7 +173,7 @@ export default function ActivityView() {
     );
   };
 
-  if (isLoading || isChangingView) {
+  if (isLoading || isChangingView || !vault || !vault.activityData) {
     return <LoadingComponent text="Loading activity data..." />;
   }
 
