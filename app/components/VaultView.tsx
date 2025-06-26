@@ -113,11 +113,21 @@ export default function VaultView() {
 
   useEffect(() => {
     const fetchSharesReadyToWithdraw = async () => {
-      const balance = await getBalanceOf();
-      setSharesReadyToWithdraw(balance);
+      try {
+        const balance = await getBalanceOf();
+        setSharesReadyToWithdraw(balance);
+      } catch (err) {
+        console.warn("Failed to fetch balance:", err);
+        setSharesReadyToWithdraw("");
+      }
     };
-    fetchSharesReadyToWithdraw();
-  }, [getBalanceOf]);
+
+    if (address) {
+      fetchSharesReadyToWithdraw();
+    } else {
+      setSharesReadyToWithdraw("");
+    }
+  }, [getBalanceOf, address]);
 
   useEffect(() => {
     setActions(

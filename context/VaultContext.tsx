@@ -1,6 +1,5 @@
 "use client";
 
-import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
 import { DataPresenter } from "@/lib/data/types/DataPresenter.types";
 import { DataWrangler } from "@/lib/data/utils/DataWrangler";
 import { useAppKitAccount } from "@reown/appkit/react";
@@ -27,10 +26,8 @@ interface VaultProviderProps {
 
 export function VaultProvider({ children }: VaultProviderProps) {
   const { address } = useAppKitAccount();
-  const { getUnderlyingBalanceOf } = useBalanceOf();
-  const sharesInWallet = getUnderlyingBalanceOf();
   const [vault, setVault] = useState<DataPresenter | null>(null);
-  const { data, isLoading } = useVaultData(address ?? "", sharesInWallet);
+  const { data, isLoading } = useVaultData(address ?? "");
 
   // Reset vault state when wallet changes
   useEffect(() => {

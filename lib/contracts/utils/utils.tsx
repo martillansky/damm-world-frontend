@@ -15,7 +15,7 @@ export function toBytes(hex: string): string {
 }
 
 export async function getSignerAndContract(chainId: string) {
-  const signer: Signer = getSigner();
+  const signer: Signer = await getSigner();
   if (!signer) throw new Error("Signer not found");
   const typedChain = getTypedChainId(Number(chainId));
   const { VAULT_ADDRESS, UNDERLYING_TOKEN, ANVIL_FORKED } =
@@ -46,8 +46,9 @@ export async function getSignerAndContract(chainId: string) {
   };
 }
 
-export const getSigner = () => {
+export const getSigner = async (): Promise<Signer> => {
   const provider = getEthersProvider();
+  await provider.send("eth_requestAccounts", []); // request connection
   return provider.getSigner();
 };
 
