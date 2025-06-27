@@ -2,13 +2,14 @@ import { formatTimestamp } from "@/lib/data/utils/utils";
 import { ActivityDataApiResponse, Transaction } from "../types/VaultData.types";
 
 export const convertActivityData = (
-  activityData: Array<ActivityDataApiResponse>
+  activityData: Array<ActivityDataApiResponse>,
+  underlyingTokenDecimals: number
 ): Transaction[] => {
   return activityData
     .map((tx) => {
       if (tx.return_type && tx.return_type === "deposit") return;
       const rawAmountWei = tx.assets ? tx.assets : tx.shares;
-      const decimals = tx.assets ? 6 : 18;
+      const decimals = tx.assets ? underlyingTokenDecimals : 18;
       const rawAmount = (Number(rawAmountWei) / 10 ** decimals).toString();
       const amount = rawAmount;
       const value = rawAmount;

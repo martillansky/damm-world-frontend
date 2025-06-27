@@ -6,6 +6,9 @@ import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
 import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
 import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
+import { getTypedChainId } from "@/lib/utils/chain";
+import { getEnvVars } from "@/lib/utils/env";
+import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -18,12 +21,14 @@ import Dialog, {
 import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
+import Select from "./ui/common/Select";
 import Toast, { ToastType } from "./ui/common/Toast";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function VaultView() {
   const { address } = useParams();
+  const network = useAppKitNetwork();
   const { vault, isLoading } = useVault();
   const queryClient = useQueryClient();
   const { isChangingView, setViewLoaded } = useView();
@@ -40,8 +45,20 @@ export default function VaultView() {
     null
   );
   const [amount, setAmount] = useState("");
-  const { getBalanceOf } = useBalanceOf();
+
+  const {
+    IS_UNDERLYING_WRAP_NATIVE: isUnderlyingWrapNative,
+    UNDERLYING_NATIVE_TOKEN_SYMB: underlyingNativeTokenSymb,
+    UNDERLYING_TOKEN_SYMB: underlyingTokenSymb,
+    SHARE_TOKEN_SYMB: shareTokenSymb,
+  } = getEnvVars(getTypedChainId(Number(network.chainId)));
+
+  const [selectedToken, setSelectedToken] =
+    useState<string>(underlyingTokenSymb);
+  const { getBalanceOf, getNativeBalance, getUnderlyingBalanceOf } =
+    useBalanceOf();
   const [walletBalance, setWalletBalance] = useState<string>("");
+  const [walletNativeBalance, setWalletNativeBalance] = useState<string>("");
   const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
     useState<string>("");
   const [showToast, setShowToast] = useState(false);
@@ -49,10 +66,24 @@ export default function VaultView() {
   const [toastType, setToastType] = useState<ToastType>("info");
 
   useEffect(() => {
+    const retrieveNativeBalance = async () => {
+      const nativeBalance = await getNativeBalance();
+      setWalletNativeBalance(nativeBalance);
+    };
+
     if (!isLoading && vaultData) {
       setViewLoaded();
+      if (isUnderlyingWrapNative) {
+        retrieveNativeBalance();
+      }
     }
-  }, [isLoading, vaultData, setViewLoaded]);
+  }, [
+    isLoading,
+    vaultData,
+    setViewLoaded,
+    isUnderlyingWrapNative,
+    getNativeBalance,
+  ]);
 
   const handleOperation = (op: "deposit" | "withdraw") => {
     setOperation(op);
@@ -63,7 +94,9 @@ export default function VaultView() {
     setShowDialog(false);
     if (operation === "deposit") {
       try {
-        const tx = await submitRequestDeposit(amount);
+        const wrapNativeToken =
+          isUnderlyingWrapNative && selectedToken !== underlyingTokenSymb;
+        const tx = await submitRequestDeposit(amount, wrapNativeToken);
         setToastMessage("Deposit request submitted!");
         setToastType("info");
         setShowToast(true);
@@ -103,13 +136,32 @@ export default function VaultView() {
   };
 
   const handleMaxClick = () => {
-    setAmount(operation === "deposit" ? walletBalance : sharesReadyToWithdraw);
+    setAmount(
+      operation === "deposit"
+        ? selectedToken === underlyingTokenSymb
+          ? walletBalance
+          : walletNativeBalance
+        : sharesReadyToWithdraw
+    );
   };
 
   useEffect(() => {
-    const walletBalance = vault?.positionData?.sharesInWallet;
-    setWalletBalance(walletBalance?.toString() ?? "0");
-  }, [vault?.positionData?.sharesInWallet]);
+    const fetchUnderlyingBalance = async () => {
+      try {
+        const balance = await getUnderlyingBalanceOf();
+        setWalletBalance(balance);
+      } catch (err) {
+        console.warn("Failed to fetch balance:", err);
+        setWalletBalance("");
+      }
+    };
+
+    if (address) {
+      fetchUnderlyingBalance();
+    } else {
+      setWalletBalance("");
+    }
+  }, [getUnderlyingBalanceOf, address]);
 
   useEffect(() => {
     const fetchSharesReadyToWithdraw = async () => {
@@ -186,18 +238,41 @@ export default function VaultView() {
         <Dialog
           open={showDialog}
           onClose={() => setShowDialog(false)}
-          title={operation === "deposit" ? "Deposit WLD" : "Withdraw WLD"}
+          title={
+            operation === "deposit"
+              ? `Deposit ${underlyingTokenSymb}`
+              : `Withdraw ${underlyingTokenSymb}`
+          }
         >
           <DialogContents>
+            {operation === "deposit" &&
+              !!isUnderlyingWrapNative &&
+              isUnderlyingWrapNative && (
+                <Select
+                  label="Token"
+                  options={[underlyingTokenSymb, underlyingNativeTokenSymb]}
+                  value={selectedToken}
+                  onChange={(e) => setSelectedToken(e.target.value)}
+                />
+              )}
             <Input
               type="number"
-              label="Amount (WLD)"
+              label={`Amount (${
+                operation === "deposit" ? selectedToken : underlyingTokenSymb
+              })`}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               handleMaxClick={handleMaxClick}
-              labelMax={`Max: ${
-                operation === "deposit" ? walletBalance : sharesReadyToWithdraw
-              } WLD`}
+              labelMax={
+                <>
+                  Max:{" "}
+                  {operation === "deposit"
+                    ? selectedToken === underlyingTokenSymb
+                      ? walletBalance + " " + underlyingTokenSymb
+                      : walletNativeBalance + " " + underlyingNativeTokenSymb
+                    : sharesReadyToWithdraw + " " + underlyingTokenSymb}
+                </>
+              }
               placeholder="0.0"
             />
 
@@ -205,9 +280,9 @@ export default function VaultView() {
               <ObservationCard title="Deposit Process">
                 This is a two-step process:
                 <br />
-                1. Your WLD will be deposited into the vault
+                1. Your {underlyingTokenSymb} will be deposited into the vault
                 <br />
-                2. You&apos;ll receive vWLD shares that can be claimed later
+                2. You&apos;ll receive {shareTokenSymb} shares
               </ObservationCard>
             )}
 
@@ -216,9 +291,10 @@ export default function VaultView() {
                 <ObservationCard title="Withdrawal Process">
                   This is a two-step process:
                   <br />
-                  1. Your vWLD shares will be burned
+                  1. Your {shareTokenSymb} shares will be burned
                   <br />
-                  2. You&apos;ll need to redeem your WLD assets after settlement
+                  2. You&apos;ll need to redeem your {underlyingTokenSymb}{" "}
+                  assets after settlement
                 </ObservationCard>
 
                 <WarningCard title="Withdrawal Disclaimer">

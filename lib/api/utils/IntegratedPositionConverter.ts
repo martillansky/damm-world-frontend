@@ -18,6 +18,30 @@ type IntegratedPosition = {
   completed_redeems: number;
 };
 
+export function getNullMockedIntegratedPosition(): {
+  positions: IntegratedPosition[];
+} {
+  return {
+    positions: [
+      {
+        vault_id: "",
+        latest_tvl: 0,
+        tvl_12h_ago: 0,
+        latest_apy: 0,
+        apy_12h_ago: 0,
+        share_price: 0,
+        deposit_value: 0,
+        withdrawal_value: 0,
+        position_value: 0,
+        user_total_shares: 0,
+        total_shares: 0,
+        completed_deposits: 0,
+        completed_redeems: 0,
+      },
+    ],
+  };
+}
+
 function computeAvailableToRedeemFromRaw(
   sharePriceBN: BigNumber,
   completedRedeems: number
@@ -41,9 +65,11 @@ function computeClaimableSharesFromRaw(
   const deposits = BigNumber.from(completedDeposits.toString());
   const redeems = BigNumber.from(completedRedeems.toString());
 
-  const sharesFromDeposits = deposits
-    .mul(BigNumber.from("1000000000000000000")) // scale to 18 decimals
-    .div(sharePriceFixed);
+  const sharesFromDeposits = sharePriceFixed.gt(0)
+    ? deposits
+        .mul(BigNumber.from("1000000000000000000")) // scale to 18 decimals
+        .div(sharePriceFixed)
+    : BigNumber.from(0);
 
   const rawOutput = sharesFromDeposits.sub(redeems);
   return Number(formatUnits(rawOutput, 18));

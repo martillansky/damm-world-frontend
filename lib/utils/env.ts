@@ -3,10 +3,10 @@ import { SupportedChainId, supportedChainsObject } from "../reown";
 export type ChainEnvKeys = {
   [K in SupportedChainId]: K extends typeof supportedChainsObject.anvil.id
     ? {
-        local: Record<keyof ChainEnvSchema, string>;
-        forked: Record<keyof ChainEnvSchema, string>;
+        local: Record<keyof ChainEnvSchema, string | boolean>;
+        forked: Record<keyof ChainEnvSchema, string | boolean>;
       }
-    : Record<keyof ChainEnvSchema, string>;
+    : Record<keyof ChainEnvSchema, string | boolean>;
 };
 
 type GlobalEnvSchema = {
@@ -23,6 +23,10 @@ type ChainEnvSchema = {
   UNDERLYING_TOKEN: string;
   RPC_URL: string;
   BLOCK_EXPLORER_GATEWAY: string;
+  IS_UNDERLYING_WRAP_NATIVE: boolean;
+  UNDERLYING_NATIVE_TOKEN_SYMB: string;
+  UNDERLYING_TOKEN_SYMB: string;
+  SHARE_TOKEN_SYMB: string;
 };
 
 const GLOBAL_ENV_KEYS = {
@@ -39,9 +43,34 @@ const GLOBAL_ENV_KEYS = {
 };
 
 const CHAIN_ENV_KEYS: ChainEnvKeys = {
+  [supportedChainsObject.sepolia.id]: {
+    VAULT_ADDRESS: process.env["NEXT_PUBLIC_SEPOLIA_VAULT_ADDRESS"]!,
+    UNDERLYING_TOKEN: process.env["NEXT_PUBLIC_SEPOLIA_UNDERLYING_TOKEN"]!,
+    IS_UNDERLYING_WRAP_NATIVE:
+      process.env["NEXT_PUBLIC_SEPOLIA_IS_UNDERLYING_WRAP_NATIVE"]! === "true",
+    UNDERLYING_TOKEN_SYMB:
+      process.env["NEXT_PUBLIC_SEPOLIA_UNDERLYING_TOKEN_SYMB"] ?? "UNK",
+    UNDERLYING_NATIVE_TOKEN_SYMB:
+      process.env["NEXT_PUBLIC_SEPOLIA_UNDERLYING_NATIVE_TOKEN_SYMB"] ?? "UNK",
+    SHARE_TOKEN_SYMB:
+      process.env["NEXT_PUBLIC_SEPOLIA_SHARE_TOKEN_SYMB"] ?? "UNK",
+    RPC_URL: process.env["NEXT_PUBLIC_RPC_SEPOLIA"]!,
+    BLOCK_EXPLORER_GATEWAY:
+      process.env["NEXT_PUBLIC_BLOCK_EXPLORER_GATEWAY_SEPOLIA"]!,
+  },
   [supportedChainsObject.baseSepolia.id]: {
     VAULT_ADDRESS: process.env["NEXT_PUBLIC_BASE_SEPOLIA_VAULT_ADDRESS"]!,
     UNDERLYING_TOKEN: process.env["NEXT_PUBLIC_BASE_SEPOLIA_UNDERLYING_TOKEN"]!,
+    IS_UNDERLYING_WRAP_NATIVE:
+      process.env["NEXT_PUBLIC_BASE_SEPOLIA_IS_UNDERLYING_WRAP_NATIVE"]! ===
+      "true",
+    UNDERLYING_TOKEN_SYMB:
+      process.env["NEXT_PUBLIC_BASE_SEPOLIA_UNDERLYING_TOKEN_SYMB"] ?? "UNK",
+    UNDERLYING_NATIVE_TOKEN_SYMB:
+      process.env["NEXT_PUBLIC_BASE_SEPOLIA_UNDERLYING_NATIVE_TOKEN_SYMB"] ??
+      "UNK",
+    SHARE_TOKEN_SYMB:
+      process.env["NEXT_PUBLIC_BASE_SEPOLIA_SHARE_TOKEN_SYMB"] ?? "UNK",
     RPC_URL: process.env["NEXT_PUBLIC_RPC_BASE_SEPOLIA"]!,
     BLOCK_EXPLORER_GATEWAY:
       process.env["NEXT_PUBLIC_BLOCK_EXPLORER_GATEWAY_BASE_SEPOLIA"]!,
@@ -50,6 +79,14 @@ const CHAIN_ENV_KEYS: ChainEnvKeys = {
     local: {
       VAULT_ADDRESS: process.env["NEXT_PUBLIC_VAULT_ADDRESS"]!,
       UNDERLYING_TOKEN: process.env["NEXT_PUBLIC_ANVIL_UNDERLYING_TOKEN"]!,
+      IS_UNDERLYING_WRAP_NATIVE:
+        process.env["NEXT_PUBLIC_ANVIL_IS_UNDERLYING_WRAP_NATIVE"]! === "true",
+      UNDERLYING_TOKEN_SYMB:
+        process.env["NEXT_PUBLIC_ANVIL_UNDERLYING_TOKEN_SYMB"] ?? "UNK",
+      UNDERLYING_NATIVE_TOKEN_SYMB:
+        process.env["NEXT_PUBLIC_ANVIL_UNDERLYING_NATIVE_TOKEN_SYMB"] ?? "UNK",
+      SHARE_TOKEN_SYMB:
+        process.env["NEXT_PUBLIC_ANVIL_SHARE_TOKEN_SYMB"] ?? "UNK",
       RPC_URL: process.env["NEXT_PUBLIC_RPC_ANVIL"]!,
       BLOCK_EXPLORER_GATEWAY:
         process.env["NEXT_PUBLIC_BLOCK_EXPLORER_GATEWAY_ANVIL"]!,
@@ -59,6 +96,16 @@ const CHAIN_ENV_KEYS: ChainEnvKeys = {
       VAULT_ADDRESS: process.env["NEXT_PUBLIC_FORKED_VAULT_ADDRESS_WC"]!,
       UNDERLYING_TOKEN:
         process.env["NEXT_PUBLIC_FORKED_UNDERLYING_TOKEN_ADDRESS_WC"]!,
+      IS_UNDERLYING_WRAP_NATIVE:
+        process.env["NEXT_PUBLIC_FORKED_IS_UNDERLYING_WRAP_NATIVE_WC"]! ===
+        "true",
+      UNDERLYING_TOKEN_SYMB:
+        process.env["NEXT_PUBLIC_FORKED_UNDERLYING_TOKEN_SYMB_WC"] ?? "UNK",
+      UNDERLYING_NATIVE_TOKEN_SYMB:
+        process.env["NEXT_PUBLIC_FORKED_UNDERLYING_NATIVE_TOKEN_SYMB_WC"] ??
+        "UNK",
+      SHARE_TOKEN_SYMB:
+        process.env["NEXT_PUBLIC_FORKED_SHARE_TOKEN_SYMB_WC"] ?? "UNK",
       RPC_URL: process.env["NEXT_PUBLIC_RPC_WC"]!,
       BLOCK_EXPLORER_GATEWAY:
         process.env["NEXT_PUBLIC_BLOCK_EXPLORER_GATEWAY_WC"]!,
@@ -67,6 +114,13 @@ const CHAIN_ENV_KEYS: ChainEnvKeys = {
   [supportedChainsObject.base.id]: {
     VAULT_ADDRESS: process.env["NEXT_PUBLIC_BASE_VAULT_ADDRESS"]!,
     UNDERLYING_TOKEN: process.env["NEXT_PUBLIC_BASE_UNDERLYING_TOKEN"]!,
+    IS_UNDERLYING_WRAP_NATIVE:
+      process.env["NEXT_PUBLIC_BASE_IS_UNDERLYING_WRAP_NATIVE"]! === "true",
+    UNDERLYING_TOKEN_SYMB:
+      process.env["NEXT_PUBLIC_BASE_UNDERLYING_TOKEN_SYMB"] ?? "UNK",
+    UNDERLYING_NATIVE_TOKEN_SYMB:
+      process.env["NEXT_PUBLIC_BASE_UNDERLYING_NATIVE_TOKEN_SYMB"] ?? "UNK",
+    SHARE_TOKEN_SYMB: process.env["NEXT_PUBLIC_BASE_SHARE_TOKEN_SYMB"] ?? "UNK",
     RPC_URL: process.env["NEXT_PUBLIC_RPC_BASE"]!,
     BLOCK_EXPLORER_GATEWAY:
       process.env["NEXT_PUBLIC_BLOCK_EXPLORER_GATEWAY_BASE"]!,
@@ -105,11 +159,20 @@ function getChainEnvVars(
 
 export function getEnvVars(
   chainId?: SupportedChainId
-): GlobalEnvSchema & Partial<ChainEnvSchema> {
+): GlobalEnvSchema & ChainEnvSchema {
   const globalEnv = getGlobalEnvVars();
   const chainEnv = chainId
     ? getChainEnvVars(chainId, globalEnv.ANVIL_FORKED)
-    : {};
+    : {
+        VAULT_ADDRESS: "",
+        UNDERLYING_TOKEN: "",
+        RPC_URL: "",
+        BLOCK_EXPLORER_GATEWAY: "",
+        IS_UNDERLYING_WRAP_NATIVE: false,
+        UNDERLYING_NATIVE_TOKEN_SYMB: "",
+        UNDERLYING_TOKEN_SYMB: "",
+        SHARE_TOKEN_SYMB: "",
+      };
 
   return {
     ...globalEnv,

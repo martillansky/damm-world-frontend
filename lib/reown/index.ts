@@ -4,6 +4,7 @@ import {
   base,
   baseSepolia,
   Chain,
+  sepolia,
 } from "@reown/appkit/networks";
 import { cookieStorage, createStorage } from "@wagmi/core";
 import { anvil } from "./chains";
@@ -20,6 +21,7 @@ export const supportedChainsObject = {
   anvil,
   baseSepolia,
   base,
+  sepolia,
 };
 
 const supportedChains = Object.values(supportedChainsObject);

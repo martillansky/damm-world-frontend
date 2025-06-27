@@ -63,7 +63,7 @@ const config: Config = {
       },
       boxShadow: {
         card: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-        glow: "0 0 15px rgba(234, 88, 12, 0.3)",
+        glow: "0 0 15px rgba(163, 230, 53, 0.3)",
         glowViolet: "0 0 15px rgba(127, 90, 240, 0.3)",
       },
       backgroundImage: {

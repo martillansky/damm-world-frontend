@@ -51,7 +51,7 @@ body {
   }
 
   .input {
-    @apply w-full px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200;
+    @apply w-full px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400 transition-all duration-200;
   }
 
   .badge {

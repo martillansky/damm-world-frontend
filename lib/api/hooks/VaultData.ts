@@ -11,10 +11,13 @@ import {
   VaultDataResponse,
 } from "../types/VaultData.types";
 import { convertActivityData } from "../utils/ActivityDataConverter";
-import { convertIntegratedPosition } from "../utils/IntegratedPositionConverter";
+import {
+  convertIntegratedPosition,
+  getNullMockedIntegratedPosition,
+} from "../utils/IntegratedPositionConverter";
 
 export function useVaultData(wallet: string) {
-  const { getUnderlyingBalanceOf } = useBalanceOf();
+  const { getUnderlyingBalanceOf, getUnderlyingTokenDecimals } = useBalanceOf();
   const { getVaultDataDirectly } = useGetVaultDataDirectly();
   const network = useAppKitNetwork();
 
@@ -22,6 +25,7 @@ export function useVaultData(wallet: string) {
     queryKey: ["vaultData", wallet],
     queryFn: async () => {
       if (typeof wallet !== "string" || wallet.trim() === "") {
+        console.warn("No wallet address provided");
         return getNullMockedVaultData();
       }
       try {
@@ -36,9 +40,10 @@ export function useVaultData(wallet: string) {
         if (!integratedPositionResponse.ok)
           throw new Error("Failed to fetch vault data");
 
-        const vaultData = await integratedPositionResponse.json();
+        let vaultData = await integratedPositionResponse.json();
         if (vaultData.positions.length === 0) {
-          return getNullMockedVaultData();
+          console.warn("No positions found");
+          vaultData = getNullMockedIntegratedPosition();
         }
 
         const integratedPositionData: IntegratedDataResponse =
@@ -56,8 +61,10 @@ export function useVaultData(wallet: string) {
         );
         if (!txsResponse.ok) throw new Error("Failed to fetch vault data");
 
+        const underlyingTokenDecimals = await getUnderlyingTokenDecimals();
         const activityData: Transaction[] = convertActivityData(
-          (await txsResponse.json()).txs
+          (await txsResponse.json()).txs,
+          underlyingTokenDecimals
         );
 
         const data: VaultDataResponse = {

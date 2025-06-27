@@ -13,6 +13,7 @@ import CloseIcon from "./icons/CloseIcon";
 import WaitingSettlementIcon from "./icons/WaitingSettlementIcon";
 import Card from "./ui/common/Card";
 import LoadingComponent from "./ui/common/LoadingComponent";
+import Select from "./ui/common/Select";
 import Toast, { ToastType } from "./ui/common/Toast";
 
 export default function ActivityView() {
@@ -185,20 +186,31 @@ export default function ActivityView() {
           variant="small"
           subtitle="Transaction activity for this liquidity vault"
           selector={
-            <select
+            <Select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="px-2 py-1 bg-surface-hover-light dark:bg-zinc-800 rounded-lg text-xs font-medium border border-border-light dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="all">All Activities</option>
-              <option value="cancellable">Cancellable</option>
-              <option value="deposit">Deposits</option>
-              <option value="withdraw">Withdraws</option>
-              <option value="claim">Claims</option>
-              <option value="redeem">Redeems</option>
-              <option value="claim_and_redeem">Claim & Redeem</option>
-              <option value="transfers">Transfers</option>
-            </select>
+              options={[
+                "all",
+                "cancellable",
+                "deposit",
+                "withdraw",
+                "claim",
+                "redeem",
+                "claim_and_redeem",
+                "transfers",
+              ]}
+              displayLabels={{
+                all: "All Activities",
+                cancellable: "Cancellable",
+                deposit: "Deposits",
+                withdraw: "Withdraws",
+                claim: "Claims",
+                redeem: "Redeems",
+                claim_and_redeem: "Claim & Redeem",
+                transfers: "Transfers",
+              }}
+              size="small"
+            />
           }
         >
           {getTxsTable()}
