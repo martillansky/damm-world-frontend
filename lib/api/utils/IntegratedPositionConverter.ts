@@ -15,6 +15,7 @@ type IntegratedPosition = {
   user_total_shares: number;
   total_shares: number;
   completed_deposits: number;
+  settled_redeems: number;
   completed_redeems: number;
 };
 
@@ -36,25 +37,16 @@ export function getNullMockedIntegratedPosition(): {
         user_total_shares: 0,
         total_shares: 0,
         completed_deposits: 0,
+        settled_redeems: 0,
         completed_redeems: 0,
       },
     ],
   };
 }
 
-function computeAvailableToRedeemFromRaw(
-  sharePriceBN: BigNumber,
-  completedRedeems: number
-): number {
-  const completedRedeemsBN = BigNumber.from(completedRedeems.toString());
-  //const sharePriceBN = parseUnits(sharePrice.toString(), 18);
-
-  const availableToRedeemBN = completedRedeemsBN
-    .mul(sharePriceBN)
-    .div(parseUnits("1", 18));
-
-  const availableToRedeemWLD = Number(formatUnits(availableToRedeemBN, 18));
-  return availableToRedeemWLD;
+function computeAvailableToRedeem(settledRedeems: number): number {
+  // TODO: check if this is correct. Should we use the share price?
+  return Number(formatUnits(BigNumber.from(settledRedeems.toString()), 18));
 }
 
 function computeClaimableSharesFromRaw(
@@ -71,7 +63,11 @@ function computeClaimableSharesFromRaw(
         .div(sharePriceFixed)
     : BigNumber.from(0);
 
-  const rawOutput = sharesFromDeposits.sub(redeems);
+  let rawOutput = sharesFromDeposits.sub(redeems);
+  if (rawOutput.lt(0)) {
+    rawOutput = BigNumber.from(0);
+  }
+
   return Number(formatUnits(rawOutput, 18));
 }
 
@@ -102,10 +98,7 @@ export function convertIntegratedPosition(
   const sharePriceStr = Number(p.share_price).toFixed(18);
   const sharePriceFixed = parseUnits(sharePriceStr, 18);
 
-  const availableToRedeemWLD = computeAvailableToRedeemFromRaw(
-    sharePriceFixed,
-    p.completed_redeems
-  );
+  const availableToRedeemWLD = computeAvailableToRedeem(p.settled_redeems);
 
   const claimableShares = computeClaimableSharesFromRaw(
     p.completed_deposits,

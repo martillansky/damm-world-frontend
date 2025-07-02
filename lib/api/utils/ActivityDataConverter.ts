@@ -33,9 +33,15 @@ export const convertActivityData = (
       );
       const txHash = tx.tx_hash.slice(0, 6) + "..." + tx.tx_hash.slice(-4);
       const id = tx.block.toString();
+      const requests_source =
+        sourceTable[tx.source_table as keyof typeof sourceTable];
       const type = tx.return_type
-        ? tx.return_type
-        : sourceTable[tx.source_table as keyof typeof sourceTable];
+        ? tx.return_type === "withdraw"
+          ? "redeem"
+          : "deposit"
+        : requests_source === "redeem"
+        ? "withdraw"
+        : requests_source;
 
       return {
         id: id,
@@ -48,5 +54,6 @@ export const convertActivityData = (
         value: value,
       };
     })
-    .filter((tx): tx is Transaction => tx !== undefined);
+    .filter((tx): tx is Transaction => tx !== undefined)
+    .sort((a, b) => Number(b.id) - Number(a.id));
 };

@@ -17,7 +17,7 @@ import {
 } from "../utils/IntegratedPositionConverter";
 
 export function useVaultData(wallet: string) {
-  const { getUnderlyingBalanceOf, getUnderlyingTokenDecimals } = useBalanceOf();
+  const { getUnderlyingTokenDecimals, getBalanceOf } = useBalanceOf();
   const { getVaultDataDirectly } = useGetVaultDataDirectly();
   const network = useAppKitNetwork();
 
@@ -47,10 +47,7 @@ export function useVaultData(wallet: string) {
         }
 
         const integratedPositionData: IntegratedDataResponse =
-          convertIntegratedPosition(
-            vaultData,
-            Number(await getUnderlyingBalanceOf())
-          );
+          convertIntegratedPosition(vaultData, Number(await getBalanceOf()));
 
         const txsResponse = await fetch(
           `${
