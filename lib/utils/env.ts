@@ -14,6 +14,7 @@ type GlobalEnvSchema = {
   INFURA_API_KEY: string;
   ANVIL_FORKED: boolean;
   API_GATEWAY: string;
+  WEB_SOCKET_GATEWAY: string;
   ENVIRONMENT: string;
   ACTIVE_MINIAPP: boolean;
 };
@@ -38,6 +39,10 @@ const GLOBAL_ENV_KEYS = {
     process.env["NEXT_PUBLIC_ENVIRONMENT"] === "development"
       ? process.env["NEXT_PUBLIC_API_GATEWAY_LOCAL"]
       : process.env["NEXT_PUBLIC_API_GATEWAY_PRODUCTION"],
+  WEB_SOCKET_GATEWAY:
+    process.env["NEXT_PUBLIC_ENVIRONMENT"] === "development"
+      ? process.env["NEXT_PUBLIC_WEB_SOCKET_GATEWAY_LOCAL"]
+      : process.env["NEXT_PUBLIC_WEB_SOCKET_GATEWAY_PRODUCTION"],
   ENVIRONMENT: process.env["NEXT_PUBLIC_ENVIRONMENT"],
   ACTIVE_MINIAPP: process.env["NEXT_PUBLIC_ACTIVATE_MINIAPP"] === "true",
 };

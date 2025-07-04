@@ -16,6 +16,7 @@ import ServerContent from "./ServerContent";
 import { ThemeProvider } from "./ThemeContext";
 import { VaultProvider } from "./VaultContext";
 import { ViewProvider } from "./ViewContext";
+import { WebSocketProvider } from "./WebSocketContext";
 
 if (!projectId) {
   throw new Error("Project ID is not defined");
@@ -83,17 +84,19 @@ function ContextProvider({ children, cookies }: ContextProviderProps) {
       config={wagmiAdapter.wagmiConfig as Config}
       initialState={initialState}
     >
-      <Providers>
-        <ServerContent />
-        <ThemeProvider>
-          <ViewProvider>
-            <VaultProvider>
-              <WalletChangeHandler />
-              {children}
-            </VaultProvider>
-          </ViewProvider>
-        </ThemeProvider>
-      </Providers>
+      <WebSocketProvider>
+        <Providers>
+          <ServerContent />
+          <ThemeProvider>
+            <ViewProvider>
+              <VaultProvider>
+                <WalletChangeHandler />
+                {children}
+              </VaultProvider>
+            </ViewProvider>
+          </ThemeProvider>
+        </Providers>
+      </WebSocketProvider>
     </WagmiProvider>
   );
 }
