@@ -23,6 +23,7 @@ export interface Transaction {
   type: string;
   amount: string;
   status: string;
+  rawTs: number;
   timestamp: string;
   txHash: string;
   txHashShort: string;

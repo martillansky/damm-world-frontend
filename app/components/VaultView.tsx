@@ -2,7 +2,6 @@ import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
 import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
-import { useWebSocket } from "@/context/WebSocketContext";
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
 import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
 import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
@@ -28,9 +27,6 @@ import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function VaultView() {
-  const { latestPublicMessage, latestPrivateMessage } = useWebSocket();
-  console.log("WEBSOCKET PUBLIC MESSAGE: ", latestPublicMessage);
-  console.log("WEBSOCKET PRIVATE MESSAGE: ", latestPrivateMessage);
   const { address } = useParams();
   const network = useAppKitNetwork();
   const { vault, isLoading } = useVault();

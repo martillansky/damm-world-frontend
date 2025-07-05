@@ -2,6 +2,7 @@
 
 import { DataPresenter } from "@/lib/data/types/DataPresenter.types";
 import { DataWrangler } from "@/lib/data/utils/DataWrangler";
+import { handleVaultWebSocketEvent } from "@/lib/websockets/handleWebSocketEvents";
 import { useAppKitAccount } from "@reown/appkit/react";
 import {
   createContext,
@@ -11,6 +12,7 @@ import {
   useState,
 } from "react";
 import { useVaultData } from "../lib/api/hooks/VaultData";
+import { useWebSocket } from "./WebSocketContext";
 
 interface VaultContextType {
   vault: DataPresenter | null;
@@ -29,6 +31,10 @@ export function VaultProvider({ children }: VaultProviderProps) {
   const [vault, setVault] = useState<DataPresenter | null>(null);
   const { data, isLoading } = useVaultData(address ?? "");
 
+  const { latestPublicMessage, latestPrivateMessage } = useWebSocket();
+  console.log("WEBSOCKET PUBLIC MESSAGE: ", latestPublicMessage);
+  console.log("WEBSOCKET PRIVATE MESSAGE: ", latestPrivateMessage);
+
   useEffect(() => {
     if (isLoading || !address) {
       setVault(null);
@@ -36,6 +42,26 @@ export function VaultProvider({ children }: VaultProviderProps) {
       setVault(DataWrangler({ data }));
     }
   }, [isLoading, data, address]);
+
+  useEffect(() => {
+    if (!latestPrivateMessage) return;
+
+    console.log("VaultContext received private message:", latestPrivateMessage);
+
+    setVault((prevVault) =>
+      handleVaultWebSocketEvent(prevVault, latestPrivateMessage)
+    );
+  }, [latestPrivateMessage]);
+
+  useEffect(() => {
+    if (!latestPublicMessage) return;
+
+    console.log("VaultContext received public message:", latestPublicMessage);
+
+    setVault((prevVault) =>
+      handleVaultWebSocketEvent(prevVault, latestPublicMessage)
+    );
+  }, [latestPublicMessage]);
 
   return (
     <VaultContext.Provider

@@ -10,6 +10,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import CheckIcon from "./icons/CheckIcon";
 import CloseIcon from "./icons/CloseIcon";
+import DoubleCheckIcon from "./icons/DoubleCheckIcon";
 import WaitingSettlementIcon from "./icons/WaitingSettlementIcon";
 import Card from "./ui/common/Card";
 import LoadingComponent from "./ui/common/LoadingComponent";
@@ -58,8 +59,9 @@ export default function ActivityView() {
       case "waiting_settlement":
         return <WaitingSettlementIcon />;
       case "settled":
-      case "completed":
         return <CheckIcon />;
+      case "completed":
+        return <DoubleCheckIcon />;
       case "failed":
         return <CloseIcon className="w-4 h-4 text-red-500" />;
       default:
@@ -123,7 +125,7 @@ export default function ActivityView() {
               return tx.type === "sent" || tx.type === "received";
             return true;
           })
-          .map((tx) => {
+          .map((tx, index) => {
             const explorerLink = `${
               getEnvVars(getTypedChainId(chainId as number))
                 .BLOCK_EXPLORER_GATEWAY
@@ -131,7 +133,7 @@ export default function ActivityView() {
 
             return (
               <div
-                key={tx.id}
+                key={index}
                 className="flex items-center space-x-3 py-2 border-b border-border-light dark:border-border last:border-0"
               >
                 <div className="w-8 flex items-center justify-center">
