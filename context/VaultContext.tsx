@@ -32,8 +32,6 @@ export function VaultProvider({ children }: VaultProviderProps) {
   const { data, isLoading } = useVaultData(address ?? "");
 
   const { latestPublicMessage, latestPrivateMessage } = useWebSocket();
-  console.log("WEBSOCKET PUBLIC MESSAGE: ", latestPublicMessage);
-  console.log("WEBSOCKET PRIVATE MESSAGE: ", latestPrivateMessage);
 
   useEffect(() => {
     if (isLoading || !address) {
@@ -46,8 +44,6 @@ export function VaultProvider({ children }: VaultProviderProps) {
   useEffect(() => {
     if (!latestPrivateMessage) return;
 
-    console.log("VaultContext received private message:", latestPrivateMessage);
-
     setVault((prevVault) =>
       handleVaultWebSocketEvent(prevVault, latestPrivateMessage)
     );
@@ -55,8 +51,6 @@ export function VaultProvider({ children }: VaultProviderProps) {
 
   useEffect(() => {
     if (!latestPublicMessage) return;
-
-    console.log("VaultContext received public message:", latestPublicMessage);
 
     setVault((prevVault) =>
       handleVaultWebSocketEvent(prevVault, latestPublicMessage)

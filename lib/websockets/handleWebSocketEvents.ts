@@ -1,4 +1,4 @@
-import { WebSocketEvent, WebSocketMessage } from "@/context/WebSocketContext";
+import { WebSocketMessage } from "@/context/WebSocketContext";
 import { DataPresenter } from "@/lib/data/types/DataPresenter.types";
 
 export function handleVaultWebSocketEvent(
@@ -7,13 +7,11 @@ export function handleVaultWebSocketEvent(
 ): DataPresenter | null {
   if (!vault || !message.data) return vault;
 
-  const wsEvent: WebSocketEvent = message.data;
-
-  switch (wsEvent.event) {
+  switch (message.event) {
     case "deposit":
-      return handleTxStatusEvent(vault, wsEvent.data);
+      return handleTxStatusEvent(vault, message.data);
     case "redeem":
-      return handleTxStatusEvent(vault, wsEvent.data);
+      return handleTxStatusEvent(vault, message.data);
     default:
       console.warn("Unhandled WebSocket event:", message.event);
       return vault;
@@ -22,7 +20,7 @@ export function handleVaultWebSocketEvent(
 
 function handleTxStatusEvent(
   vault: DataPresenter,
-  data: WebSocketEvent["data"]
+  data: unknown
 ): DataPresenter {
   //{"status": "settled", "tx_hash": tx_hash})
   const typedData = data as { status: string; tx_hash: string };

@@ -12,15 +12,9 @@ import React, {
 } from "react";
 import { useAccount } from "wagmi";
 
-export interface WebSocketEvent {
-  event: string;
-  data: unknown;
-}
-
 export interface WebSocketMessage {
   type?: string;
-  //data?: unknown;
-  data?: WebSocketEvent;
+  data?: unknown;
   timestamp?: string;
   [key: string]: unknown;
 }
