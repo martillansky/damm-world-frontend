@@ -26,7 +26,6 @@ function handleTxStatusEvent(
   vault: DataPresenter,
   data: unknown
 ): DataPresenter {
-  //{"status": "settled", "tx_hash": tx_hash})
   const typedData = data as { status: string; tx_hash: string };
 
   const updatedActivity = vault.activityData.map((tx) =>
@@ -36,23 +35,10 @@ function handleTxStatusEvent(
 }
 
 function handleNewTxEvent(vault: DataPresenter, data: unknown): DataPresenter {
-  /* 
-    {
-        "tx_type": "deposit", 
-        "tx_status": "pending", 
-        "event_timestamp": event_timestamp, 
-        "tx_hash": tx_hash, 
-        "block": block_number, 
-        "assets": assets
-    }
-    */
-
-  const txData = data as { tx_type: string };
   const typedData = data as ActivityDataApiResponse;
-  typedData["return_type"] = txData.tx_type;
-  typedData["source_table"] =
-    txData.tx_type === "withdraw" ? "vault_returns" : txData.tx_type;
-
+  if (typedData.assets) typedData.assets = Number(typedData.assets);
+  if (typedData.shares) typedData.shares = Number(typedData.shares);
   const newTx = convertActivityData([typedData], 18);
+  if (!newTx || newTx.length === 0) return vault;
   return { ...vault, activityData: [newTx[0], ...vault.activityData] };
 }

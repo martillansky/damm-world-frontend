@@ -17,6 +17,7 @@ export interface ActivityDataApiResponse {
   source_table: string;
   status: string;
   return_type: string;
+  transfer_type: string;
 }
 export interface Transaction {
   id: string;

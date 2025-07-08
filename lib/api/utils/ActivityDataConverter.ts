@@ -40,6 +40,8 @@ export const convertActivityData = (
           : "deposit"
         : requests_source === "redeem"
         ? "withdraw"
+        : requests_source === "transfer"
+        ? tx.transfer_type
         : requests_source;
 
       return {

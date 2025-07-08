@@ -140,12 +140,12 @@ export default function PositionView() {
             tooltip="Proportional ownership of the total assets in this vault"
             right={positionData?.vaultShare}
           />
-          <CardRow
+          {/* <CardRow
             left="Claimable Shares"
             tooltip="Shares that can be claimed after deposit requests are settled"
             right={positionData?.claimableShares}
             highlightedRight
-          />
+          /> */}
           <CardRow
             left="Shares in Wallet"
             tooltip="Shares that are currently in your wallet"
