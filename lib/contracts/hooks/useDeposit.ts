@@ -2,7 +2,12 @@ import { TransactionResponse } from "@ethersproject/providers";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { parseUnits } from "ethers/lib/utils";
 import { useAccount } from "wagmi";
-import { handleApprove, wrapNativeETH } from "../utils/TokenUtils";
+import { batchTxs, Call, MULTICALL3_ADDRESS } from "../utils/BatchTxs";
+import {
+  getApproveTx,
+  handleApprove,
+  wrapNativeETH,
+} from "../utils/TokenUtils";
 import { getSignerAndContract } from "../utils/utils";
 
 export function useDeposit() {
@@ -43,5 +48,76 @@ export function useDeposit() {
     return tx as unknown as TransactionResponse;
   };
 
-  return { submitRequestDeposit, cancelDepositRequest };
+  const submitRequestDepositOnMulticall = async (
+    amount: string,
+    wrapNativeToken: boolean
+  ) => {
+    if (!address) throw new Error("No address found");
+
+    const chainId = network.chainId?.toString() ?? "";
+    const { vault, tokenMetadata } = await getSignerAndContract(chainId);
+
+    if (wrapNativeToken) {
+      await wrapNativeETH(chainId, amount);
+    }
+
+    const amountInWei = parseUnits(amount, tokenMetadata.decimals);
+    const calls: Call[] = [];
+
+    const setOperatorCall = {
+      target: vault.address,
+      allowFailure: false,
+      callData: vault.interface.encodeFunctionData("setOperator", [
+        MULTICALL3_ADDRESS,
+        true,
+      ]),
+    };
+    calls.push(setOperatorCall);
+
+    const approveTx = await getApproveTx(
+      chainId,
+      address,
+      vault.address,
+      amountInWei
+    );
+    if (approveTx) {
+      calls.push(approveTx);
+    }
+    const requestDepositCall = {
+      target: vault.address,
+      allowFailure: false,
+      callData: vault.interface.encodeFunctionData(
+        "requestDeposit(uint256,address,address,address)",
+        [amountInWei, address, address, address]
+      ),
+    };
+    calls.push(requestDepositCall);
+
+    const revokeOperatorCall = {
+      target: vault.address,
+      allowFailure: true,
+      callData: vault.interface.encodeFunctionData("setOperator", [
+        MULTICALL3_ADDRESS,
+        false,
+      ]),
+    };
+    calls.push(revokeOperatorCall);
+
+    try {
+      const tx = await batchTxs(chainId, calls);
+      return tx as unknown as TransactionResponse;
+    } catch (error) {
+      console.warn(
+        "Batch transaction failed, falling back to sequential:",
+        error
+      );
+      return await submitRequestDeposit(amount, wrapNativeToken);
+    }
+  };
+
+  return {
+    submitRequestDeposit,
+    submitRequestDepositOnMulticall,
+    cancelDepositRequest,
+  };
 }

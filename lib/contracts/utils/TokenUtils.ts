@@ -1,12 +1,38 @@
 import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { BigNumber, ethers } from "ethers";
+import { Call } from "./BatchTxs";
 import { getSignerAndContract } from "./utils";
 
 const WETH_ABI = [
   "function deposit() payable",
   "function withdraw(uint256 wad)",
 ];
+
+export async function getApproveTx(
+  chainId: string,
+  address: string,
+  vaultAddress: string,
+  amountInWei: BigNumber
+): Promise<Call | null> {
+  const { underlyingToken } = await getSignerAndContract(chainId);
+
+  const allowance = await underlyingToken.allowance(address, vaultAddress);
+
+  if (allowance.lt(amountInWei)) {
+    // User needs to approve the vault to spend the underlying token
+    const approveData = underlyingToken.interface.encodeFunctionData(
+      "approve",
+      [vaultAddress, amountInWei]
+    );
+    return {
+      target: underlyingToken.address,
+      allowFailure: false,
+      callData: approveData,
+    };
+  }
+  return null;
+}
 
 export async function handleApprove(
   chainId: string,

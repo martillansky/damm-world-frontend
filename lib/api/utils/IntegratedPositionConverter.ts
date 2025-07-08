@@ -2,7 +2,7 @@ import { BigNumber } from "ethers";
 import { formatUnits, parseUnits } from "ethers/lib/utils";
 import { IntegratedDataResponse } from "../types/VaultData.types";
 
-type IntegratedPosition = {
+export type IntegratedPosition = {
   vault_id: string;
   latest_tvl: number;
   tvl_12h_ago: number;
@@ -99,7 +99,9 @@ export function convertIntegratedPosition(
   const valueGainedUSD = valueGainedWLD * wldUsdPrice;
 
   const vaultSharePct =
-    p.total_shares > 0 ? (p.user_total_shares / p.total_shares) * 100 : 0;
+    p.total_shares > 0
+      ? ((p.user_total_shares - p.settled_redeems) / p.total_shares) * 100
+      : 0;
 
   // Convert scientific notation to fixed decimal string
   const sharePriceStr = Number(p.share_price).toFixed(decimals);
