@@ -83,5 +83,7 @@ export function useVaultData(wallet: string) {
     },
     enabled: typeof wallet === "string" && wallet.length > 0,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchInterval: 5000, // Poll every 5 seconds
+    refetchIntervalInBackground: true,
   });
 }

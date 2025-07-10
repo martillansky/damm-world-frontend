@@ -14,7 +14,7 @@ export interface Call {
   callData: string;
 }
 
-export async function batchTxs(chainId: string, calls: Call[]) {
+export async function batchTxs(chainId: string, calls: Call[], value?: string) {
   const { signer } = await getSignerAndContract(chainId);
   const multicall = new ethers.Contract(
     MULTICALL3_ADDRESS,
@@ -24,7 +24,9 @@ export async function batchTxs(chainId: string, calls: Call[]) {
 
   try {
     // Step 1: Simulate off-chain to detect failures
-    const simulation = await multicall.callStatic.aggregate3(calls);
+    const simulation = await multicall.callStatic.aggregate3(calls, {
+      value: value || 0,
+    });
     const failed = simulation.find(
       (result: { success: boolean }) => result.success === false
     );
@@ -35,7 +37,9 @@ export async function batchTxs(chainId: string, calls: Call[]) {
     }
 
     // Step 2: Estimate gas from populated transaction
-    const txRequest = await multicall.populateTransaction.aggregate3(calls);
+    const txRequest = await multicall.populateTransaction.aggregate3(calls, {
+      value: value || 0,
+    });
     const gasEstimate = await signer.estimateGas(txRequest);
 
     // Step 3: Send with buffer

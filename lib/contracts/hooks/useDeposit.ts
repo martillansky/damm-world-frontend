@@ -64,7 +64,11 @@ export function useDeposit() {
     const amountInWei = parseUnits(amount, tokenMetadata.decimals);
     const calls: Call[] = [];
 
-    const setOperatorCall = {
+    const setOperatorTx = await vault.setOperator(MULTICALL3_ADDRESS, true);
+    await setOperatorTx.wait();
+    console.log("setOperatorTx", setOperatorTx);
+
+    /* const setOperatorCall = {
       target: vault.address,
       allowFailure: false,
       callData: vault.interface.encodeFunctionData("setOperator", [
@@ -72,7 +76,7 @@ export function useDeposit() {
         true,
       ]),
     };
-    calls.push(setOperatorCall);
+    calls.push(setOperatorCall); */
 
     const approveTx = await getApproveTx(
       chainId,
@@ -93,7 +97,7 @@ export function useDeposit() {
     };
     calls.push(requestDepositCall);
 
-    const revokeOperatorCall = {
+    /* const revokeOperatorCall = {
       target: vault.address,
       allowFailure: true,
       callData: vault.interface.encodeFunctionData("setOperator", [
@@ -101,10 +105,12 @@ export function useDeposit() {
         false,
       ]),
     };
-    calls.push(revokeOperatorCall);
+    calls.push(revokeOperatorCall); */
 
     try {
-      const tx = await batchTxs(chainId, calls);
+      // Pass ETH value if wrapping native token
+      const value = wrapNativeToken ? amountInWei.toString() : undefined;
+      const tx = await batchTxs(chainId, calls, value);
       return tx as unknown as TransactionResponse;
     } catch (error) {
       console.warn(
