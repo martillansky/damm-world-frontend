@@ -3,6 +3,7 @@ export interface TransactionView {
   type: string;
   amount: string;
   status: string;
+  rawTs: number;
   timestamp: string;
   txHash: string;
   txHashShort: string;

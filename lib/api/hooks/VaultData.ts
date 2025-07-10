@@ -46,8 +46,13 @@ export function useVaultData(wallet: string) {
           vaultData = getNullMockedIntegratedPosition();
         }
 
+        const underlyingTokenDecimals = await getUnderlyingTokenDecimals();
         const integratedPositionData: IntegratedDataResponse =
-          convertIntegratedPosition(vaultData, Number(await getBalanceOf()));
+          convertIntegratedPosition(
+            vaultData,
+            Number(await getBalanceOf()),
+            underlyingTokenDecimals
+          );
 
         const txsResponse = await fetch(
           `${
@@ -58,7 +63,6 @@ export function useVaultData(wallet: string) {
         );
         if (!txsResponse.ok) throw new Error("Failed to fetch vault data");
 
-        const underlyingTokenDecimals = await getUnderlyingTokenDecimals();
         const activityData: Transaction[] = convertActivityData(
           (await txsResponse.json()).txs,
           underlyingTokenDecimals
@@ -79,5 +83,7 @@ export function useVaultData(wallet: string) {
     },
     enabled: typeof wallet === "string" && wallet.length > 0,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchInterval: 5000, // Poll every 5 seconds
+    refetchIntervalInBackground: true,
   });
 }

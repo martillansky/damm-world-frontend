@@ -2,7 +2,7 @@ import { BigNumber } from "ethers";
 import { formatUnits, parseUnits } from "ethers/lib/utils";
 import { IntegratedDataResponse } from "../types/VaultData.types";
 
-type IntegratedPosition = {
+export type IntegratedPosition = {
   vault_id: string;
   latest_tvl: number;
   tvl_12h_ago: number;
@@ -44,22 +44,28 @@ export function getNullMockedIntegratedPosition(): {
   };
 }
 
-function computeAvailableToRedeem(settledRedeems: number): number {
+function computeAvailableToRedeem(
+  settledRedeems: number,
+  decimals: number
+): number {
   // TODO: check if this is correct. Should we use the share price?
-  return Number(formatUnits(BigNumber.from(settledRedeems.toString()), 18));
+  return Number(
+    formatUnits(BigNumber.from(settledRedeems.toString()), decimals)
+  );
 }
 
 function computeClaimableSharesFromRaw(
   completedDeposits: number, // e.g. 1000000 USDC
   sharePriceFixed: BigNumber, // e.g. 9.99999e-13
-  completedRedeems: number // e.g. 999999 (in 18 decimals)
+  completedRedeems: number, // e.g. 999999 (in 18 decimals)
+  decimals: number
 ): number {
   const deposits = BigNumber.from(completedDeposits.toString());
   const redeems = BigNumber.from(completedRedeems.toString());
 
   const sharesFromDeposits = sharePriceFixed.gt(0)
     ? deposits
-        .mul(BigNumber.from("1000000000000000000")) // scale to 18 decimals
+        .mul(BigNumber.from(10).pow(decimals)) // scale to 18 decimals
         .div(sharePriceFixed)
     : BigNumber.from(0);
 
@@ -68,12 +74,13 @@ function computeClaimableSharesFromRaw(
     rawOutput = BigNumber.from(0);
   }
 
-  return Number(formatUnits(rawOutput, 18));
+  return Number(formatUnits(rawOutput, decimals));
 }
 
 export function convertIntegratedPosition(
   response: { positions: IntegratedPosition[] },
   sharesInWallet: number | null = null,
+  decimals: number = 18,
   wldUsdPrice: number = 1, // hardcoded or fetched elsewhere
   wldBalance: number | null = null,
   usdcBalance: number | null = null
@@ -92,34 +99,42 @@ export function convertIntegratedPosition(
   const valueGainedUSD = valueGainedWLD * wldUsdPrice;
 
   const vaultSharePct =
-    p.total_shares > 0 ? (p.user_total_shares / p.total_shares) * 100 : 0;
+    p.total_shares > 0
+      ? ((p.user_total_shares - p.settled_redeems) / p.total_shares) * 100
+      : 0;
 
   // Convert scientific notation to fixed decimal string
-  const sharePriceStr = Number(p.share_price).toFixed(18);
-  const sharePriceFixed = parseUnits(sharePriceStr, 18);
+  const sharePriceStr = Number(p.share_price).toFixed(decimals);
+  const sharePriceFixed = parseUnits(sharePriceStr, decimals);
 
-  const availableToRedeemWLD = computeAvailableToRedeem(p.settled_redeems);
+  const availableToRedeemWLD = computeAvailableToRedeem(
+    p.settled_redeems,
+    decimals
+  );
 
   const claimableShares = computeClaimableSharesFromRaw(
     p.completed_deposits,
     sharePriceFixed,
-    p.completed_redeems
+    p.completed_redeems,
+    decimals
   );
+
+  const formattedPositionValue = p.position_value / 10 ** decimals;
 
   return {
     vaultData: {
-      tvl: p.latest_tvl,
+      tvl: p.latest_tvl / 10 ** decimals,
       tvlChange: tvlChangePct,
       apr: p.latest_apy,
       aprChange: apyChangePct,
       valueGained: valueGainedWLD,
       valueGainedUSD,
-      position: p.position_value,
-      positionUSD: p.position_value * wldUsdPrice,
+      position: formattedPositionValue,
+      positionUSD: formattedPositionValue * wldUsdPrice,
     },
     positionData: {
-      totalValue: p.position_value,
-      totalValueUSD: p.position_value * wldUsdPrice,
+      totalValue: formattedPositionValue,
+      totalValueUSD: formattedPositionValue * wldUsdPrice,
       availableToRedeem: availableToRedeemWLD,
       availableToRedeemUSD: availableToRedeemWLD * wldUsdPrice,
       claimableShares: claimableShares,

@@ -28,9 +28,8 @@ export const convertActivityData = (
           ? "failed"
           : tx.status
         : "completed";
-      const timestamp = formatTimestamp(
-        new Date(tx.timestamp).getTime() / 1000
-      );
+      const rawTs = new Date(tx.timestamp).getTime() / 1000;
+      const timestamp = formatTimestamp(rawTs);
       const txHash = tx.tx_hash.slice(0, 6) + "..." + tx.tx_hash.slice(-4);
       const id = tx.block.toString();
       const requests_source =
@@ -41,6 +40,8 @@ export const convertActivityData = (
           : "deposit"
         : requests_source === "redeem"
         ? "withdraw"
+        : requests_source === "transfer"
+        ? tx.transfer_type
         : requests_source;
 
       return {
@@ -48,6 +49,7 @@ export const convertActivityData = (
         type: type,
         amount: amount,
         status: status,
+        rawTs: rawTs,
         timestamp: timestamp,
         txHash: tx.tx_hash,
         txHashShort: txHash,
@@ -55,5 +57,5 @@ export const convertActivityData = (
       };
     })
     .filter((tx): tx is Transaction => tx !== undefined)
-    .sort((a, b) => Number(b.id) - Number(a.id));
+    .sort((a, b) => b.rawTs - a.rawTs);
 };

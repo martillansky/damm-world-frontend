@@ -17,12 +17,14 @@ export interface ActivityDataApiResponse {
   source_table: string;
   status: string;
   return_type: string;
+  transfer_type: string;
 }
 export interface Transaction {
   id: string;
   type: string;
   amount: string;
   status: string;
+  rawTs: number;
   timestamp: string;
   txHash: string;
   txHashShort: string;

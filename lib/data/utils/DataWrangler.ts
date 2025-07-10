@@ -64,6 +64,7 @@ export function transformActivityData(
     type: activity.type,
     amount: activity.amount,
     status: activity.status,
+    rawTs: activity.rawTs,
     timestamp: activity.timestamp,
     txHash: activity.txHash,
     txHashShort: activity.txHashShort,
