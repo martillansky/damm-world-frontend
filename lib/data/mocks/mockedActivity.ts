@@ -10,6 +10,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x1234...5678",
     txHashShort: "0x1234...5678",
     value: "+$103.00",
+    rawTs: Date.now() - 2 * 60 * 60 * 1000,
   },
   {
     id: "1235",
@@ -20,6 +21,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x8765...4321",
     txHashShort: "0x8765...4321",
     value: "+$154.50",
+    rawTs: Date.now() - 5 * 60 * 60 * 1000,
   },
   {
     id: "1236",
@@ -30,6 +32,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x9876...5432",
     txHashShort: "0x9876...5432",
     value: "-$206.00",
+    rawTs: Date.now() - 24 * 60 * 60 * 1000,
   },
   {
     id: "1237",
@@ -40,6 +43,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x2468...1357",
     txHashShort: "0x2468...1357",
     value: "-$51.50",
+    rawTs: Date.now() - 2 * 24 * 60 * 60 * 1000,
   },
   {
     id: "5678",
@@ -50,6 +54,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x2468...1357",
     txHashShort: "0x2468...1357",
     value: "+$51.50",
+    rawTs: Date.now() - 3 * 60 * 60 * 1000,
   },
   {
     id: "5679",
@@ -60,6 +65,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x1357...2468",
     txHashShort: "0x1357...2468",
     value: "-$82.40",
+    rawTs: Date.now() - 6 * 60 * 60 * 1000,
   },
   {
     id: "5680",
@@ -70,6 +76,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x1357...2468",
     txHashShort: "0x1357...2468",
     value: "-$30.90",
+    rawTs: Date.now() - 24 * 60 * 60 * 1000,
   },
   {
     id: "7890",
@@ -80,6 +87,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7890...1234",
     txHashShort: "0x7890...1234",
     value: "-$61.80",
+    rawTs: Date.now() - 4 * 60 * 60 * 1000,
   },
   {
     id: "7891",
@@ -90,6 +98,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7891...5678",
     txHashShort: "0x7891...5678",
     value: "+$92.70",
+    rawTs: Date.now() - 7 * 60 * 60 * 1000,
   },
   {
     id: "7892",
@@ -100,6 +109,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7892...1234",
     txHashShort: "0x7892...1234",
     value: "+$123.60",
+    rawTs: Date.now() - 3 * 60 * 60 * 1000,
   },
   {
     id: "7893",
@@ -110,6 +120,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7893...5678",
     txHashShort: "0x7893...5678",
     value: "+$72.10",
+    rawTs: Date.now() - 1 * 60 * 60 * 1000,
   },
   {
     id: "7894",
@@ -120,6 +131,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7894...9012",
     txHashShort: "0x7894...9012",
     value: "-$164.80",
+    rawTs: Date.now() - 2 * 60 * 60 * 1000,
   },
   {
     id: "7895",
@@ -130,6 +142,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7895...3456",
     txHashShort: "0x7895...3456",
     value: "+$41.20",
+    rawTs: Date.now() - 4 * 60 * 60 * 1000,
   },
   {
     id: "7896",
@@ -140,6 +153,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7896...7890",
     txHashShort: "0x7896...7890",
     value: "-$113.30",
+    rawTs: Date.now() - 8 * 60 * 60 * 1000,
   },
   {
     id: "7897",
@@ -150,6 +164,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7897...2345",
     txHashShort: "0x7897...2345",
     value: "-$51.50",
+    rawTs: Date.now() - 5 * 60 * 60 * 1000,
   },
   {
     id: "7898",
@@ -160,6 +175,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7898...6789",
     txHashShort: "0x7898...6789",
     value: "+$82.40",
+    rawTs: Date.now() - 6 * 60 * 60 * 1000,
   },
   {
     id: "7899",
@@ -170,6 +186,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7899...0123",
     txHashShort: "0x7899...0123",
     value: "+$185.40",
+    rawTs: Date.now() - 24 * 60 * 60 * 1000,
   },
   {
     id: "7900",
@@ -180,6 +197,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7900...4567",
     txHashShort: "0x7900...4567",
     value: "-$92.70",
+    rawTs: Date.now() - 2 * 24 * 60 * 60 * 1000,
   },
   {
     id: "7901",
@@ -190,6 +208,7 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7901...8901",
     txHashShort: "0x7901...8901",
     value: "-$61.80",
+    rawTs: Date.now() - 3 * 24 * 60 * 60 * 1000,
   },
   {
     id: "7902",
@@ -200,5 +219,6 @@ export const mockedActivity: Transaction[] = [
     txHash: "0x7902...2345",
     txHashShort: "0x7902...2345",
     value: "+$144.20",
+    rawTs: Date.now() - 4 * 60 * 60 * 1000,
   },
 ];

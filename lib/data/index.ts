@@ -116,6 +116,7 @@ export function useGetVaultDataDirectly() {
         type: functType,
         value: `+$${value.toString()}`,
         timestamp: tx.timestamp ? formatTimestamp(Number(tx.timestamp)) : "",
+        rawTs: tx.timestamp ? Number(tx.timestamp) : 0,
       };
     });
   };
