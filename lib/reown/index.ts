@@ -16,7 +16,7 @@ if (!projectId) {
   throw new Error("Project ID is not defined");
 }
 
-export const defaultNetwork = anvil;
+export const defaultNetwork = sepolia;
 export const supportedChainsObject = {
   anvil,
   baseSepolia,
@@ -24,13 +24,19 @@ export const supportedChainsObject = {
   sepolia,
 };
 
+export const supportedChainsActiveObject = {
+  sepolia,
+  base,
+};
+
 const supportedChains = Object.values(supportedChainsObject);
+const supportedChainsActive = Object.values(supportedChainsActiveObject);
 
 export type SupportedChainId =
   (typeof supportedChainsObject)[keyof typeof supportedChainsObject]["id"];
 
 const chains = supportedChains as unknown as readonly [Chain, ...Chain[]];
-export const networks = supportedChains as unknown as [
+export const networks = supportedChainsActive as unknown as [
   AppKitNetwork,
   ...AppKitNetwork[]
 ];
