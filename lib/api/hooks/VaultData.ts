@@ -1,6 +1,7 @@
 import { useGetVaultDataDirectly } from "@/lib/data";
 
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
+import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQuery } from "@tanstack/react-query";
@@ -30,10 +31,14 @@ export function useVaultData(wallet: string) {
       }
       try {
         //throw new Error("test");
+        const vaultAddress = getEnvVars(
+          getTypedChainId(Number(network.chainId))
+        ).VAULT_ADDRESS;
+
         const integratedPositionResponse = await fetch(
           `${
             getEnvVars().API_GATEWAY
-          }/lagoon/integrated/test/${wallet}?offset=0&limit=10&chain_id=${
+          }/lagoon/integrated/test/${wallet}/${vaultAddress}?offset=0&limit=10&chain_id=${
             network.chainId
           }`
         );
@@ -57,7 +62,7 @@ export function useVaultData(wallet: string) {
         const txsResponse = await fetch(
           `${
             getEnvVars().API_GATEWAY
-          }/lagoon/txs/test/${wallet}?offset=0&limit=10&chain_id=${
+          }/lagoon/txs/test/${wallet}/${vaultAddress}?offset=0&limit=10&chain_id=${
             network.chainId
           }`
         );
