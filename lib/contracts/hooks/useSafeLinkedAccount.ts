@@ -1,3 +1,4 @@
+import { TransactionResponse } from "@ethersproject/providers";
 import { useAppKitAccount, useAppKitNetwork } from "@reown/appkit/react";
 import Safe, {
   Eip1193Provider,
@@ -10,9 +11,9 @@ import {
   Transaction,
 } from "@safe-global/types-kit";
 import { BigNumber } from "ethers";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { parseUnits } from "viem";
-//import { usePublicClient, useWalletClient } from "wagmi";
+import { useWalletClient } from "wagmi";
 import { getContractNetworks } from "../utils/protocols/gnosis";
 import {
   getPermit2ApproveTx,
@@ -20,10 +21,9 @@ import {
 } from "../utils/protocols/permit2";
 import { getApproveTx } from "../utils/TokenUtils";
 import {
+  getDeterministicSaltNonce,
   getEthersProvider,
   getSignerAndContract,
-  randomNonceInteger,
-  toNonce,
 } from "../utils/utils";
 
 interface SafeLinkedAccountState {
@@ -37,8 +37,7 @@ export function useSafeLinkedAccount() {
   const network = useAppKitNetwork();
   const account = useAppKitAccount();
   const address = account?.address;
-  //const { data: walletClient } = useWalletClient();
-  //const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
 
   const [state, setState] = useState<SafeLinkedAccountState>({
     safeAddress: null,
@@ -48,22 +47,16 @@ export function useSafeLinkedAccount() {
   });
   const [safeSDK, setSafeSDK] = useState<Safe | null>(null);
 
-  const saltNonceRef = useRef<`0x${string}`>(toNonce(randomNonceInteger()));
-
   useEffect(() => {
     const isSafeInitialized = async () => {
       if (!address || !network.chainId || !safeSDK) return false;
-
-      const currentSafeAddress = await safeSDK.getAddress();
-      const isSameSafe =
-        currentSafeAddress?.toLowerCase() === state.safeAddress?.toLowerCase();
 
       const isSameNetwork =
         String(await safeSDK.getChainId()) === network.chainId;
 
       const isSameSigner = await safeSDK.isOwner(address);
 
-      return safeSDK && isSameSafe && isSameSigner && isSameNetwork;
+      return isSameSigner && isSameNetwork;
     };
 
     const initializeSafe = async () => {
@@ -75,24 +68,33 @@ export function useSafeLinkedAccount() {
           return;
         }
 
+        const saltNonce = getDeterministicSaltNonce(address!);
+
         const predictedSafe: PredictedSafeProps = {
           safeAccountConfig: {
             owners: [address!],
             threshold: 1,
           },
           safeDeploymentConfig: {
-            saltNonce: saltNonceRef.current,
+            saltNonce: saltNonce,
             safeVersion: "1.4.1",
           },
         };
 
-        const safeProvider = getEthersProvider() as unknown as Eip1193Provider;
-        const signer = getEthersProvider().getSigner(address!);
-        const safeSigner = (await signer.getAddress()).toString();
+        if (!walletClient) {
+          throw new Error("Wallet client not available");
+        }
+
+        const safeProvider = walletClient as unknown as Eip1193Provider;
+
+        const signer = walletClient.account?.address;
+        if (!signer) {
+          throw new Error("Signer address not available");
+        }
 
         const safeConfig: SafeConfigWithPredictedSafe = {
           provider: safeProvider,
-          signer: safeSigner,
+          signer,
           predictedSafe,
           contractNetworks: getContractNetworks({
             network: network.chainId!.toString(),
@@ -112,6 +114,7 @@ export function useSafeLinkedAccount() {
           error: null,
         });
       } catch (error) {
+        console.log("ERROR INITIALIZING SAFE", error);
         setSafeSDK(null);
         setState({
           safeAddress: null,
@@ -122,8 +125,8 @@ export function useSafeLinkedAccount() {
       }
     };
 
-    if (address && network.chainId) initializeSafe();
-  }, [address, network.chainId, safeSDK, state.safeAddress]);
+    if (address && network.chainId && walletClient) initializeSafe();
+  }, [address, network.chainId, walletClient, safeSDK]);
 
   const executeSafeBatchWorkflow = async (
     txs: SafeTransactionDataPartial[]
@@ -164,7 +167,7 @@ export function useSafeLinkedAccount() {
     }
 
     const txResponse = await signer.sendTransaction(txsBatch);
-    await txResponse.wait();
+    return txResponse as unknown as TransactionResponse;
   };
 
   const executeDepositRequestWorkflow = async (amount: string) => {
@@ -213,7 +216,8 @@ export function useSafeLinkedAccount() {
     };
     txs.push(requestDepositCall);
 
-    await executeSafeBatchWorkflow(txs);
+    const txResponse = await executeSafeBatchWorkflow(txs);
+    return txResponse as unknown as TransactionResponse;
   };
 
   return {

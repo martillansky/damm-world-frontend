@@ -36,7 +36,7 @@ export default function VaultView() {
     () => vault?.vaultData,
     [vault?.vaultData]
   );
-  const { submitRequestDeposit } = useDeposit();
+  const { submitRequestDepositOnSafe } = useDeposit();
   const { submitRequestWithdraw } = useWithdraw();
 
   const { setActions } = useActionSlot();
@@ -96,7 +96,7 @@ export default function VaultView() {
       try {
         const wrapNativeToken =
           isUnderlyingWrapNative && selectedToken !== underlyingTokenSymb;
-        const tx = await submitRequestDeposit(amount, wrapNativeToken);
+        const tx = await submitRequestDepositOnSafe(amount, wrapNativeToken);
         setToastMessage("Deposit request submitted!");
         setToastType("info");
         setShowToast(true);

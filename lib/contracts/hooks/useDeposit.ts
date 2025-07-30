@@ -1,3 +1,4 @@
+import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 import { TransactionResponse } from "@ethersproject/providers";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { parseUnits } from "ethers/lib/utils";
@@ -9,13 +10,12 @@ import {
   wrapNativeETH,
 } from "../utils/TokenUtils";
 import { getSignerAndContract } from "../utils/utils";
-import { useSafeLinkedAccount } from "./useSafeLinkedAccount";
 
 export function useDeposit() {
   const { address } = useAccount();
   const network = useAppKitNetwork();
-  const { safeAddress, isDeployed, isLoading, executeDepositRequestWorkflow } =
-    useSafeLinkedAccount();
+  const { safeAddress, isLoading, error, executeDepositRequestWorkflow } =
+    useSafeLinkedAccountContext();
 
   const cancelDepositRequest = async () => {
     if (!address) throw new Error("No address found");
@@ -129,15 +129,15 @@ export function useDeposit() {
     wrapNativeToken: boolean
   ) => {
     if (!address) throw new Error("No address found");
-    if (!safeAddress || !isDeployed || isLoading)
-      throw new Error("Safe not linked");
+    if (!safeAddress || isLoading || error) throw new Error("Safe not linked");
 
     if (wrapNativeToken) {
       // Wrap native token to WETH: must be triggered by user
       await wrapNativeETH(network.chainId!.toString(), amount);
     }
 
-    await executeDepositRequestWorkflow(amount);
+    const tx = await executeDepositRequestWorkflow(amount);
+    return tx as unknown as TransactionResponse;
   };
 
   return {

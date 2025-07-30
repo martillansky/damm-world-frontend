@@ -12,6 +12,7 @@ import {
   type Config,
 } from "wagmi";
 import Providers from "./Providers";
+import { SafeLinkedAccountProvider } from "./SafeLinkedAccountContext";
 import ServerContent from "./ServerContent";
 import { ThemeProvider } from "./ThemeContext";
 import { VaultProvider } from "./VaultContext";
@@ -87,10 +88,12 @@ function ContextProvider({ children, cookies }: ContextProviderProps) {
         <ServerContent />
         <ThemeProvider>
           <ViewProvider>
-            <VaultProvider>
-              <WalletChangeHandler />
-              {children}
-            </VaultProvider>
+            <SafeLinkedAccountProvider>
+              <VaultProvider>
+                <WalletChangeHandler />
+                {children}
+              </VaultProvider>
+            </SafeLinkedAccountProvider>
           </ViewProvider>
         </ThemeProvider>
       </Providers>
