@@ -18,7 +18,7 @@ import {
   getPermit2ApproveTx,
   getPermit2TransferFromTx,
 } from "../utils/protocols/permit2";
-import { getApproveTx, getWrapNativeETHTx } from "../utils/TokenUtils";
+import { getApproveTx } from "../utils/TokenUtils";
 import {
   getEthersProvider,
   getSignerAndContract,
@@ -128,26 +128,14 @@ export function useSafeLinkedAccount() {
   const executeSafeBatchWorkflow = async (
     txs: SafeTransactionDataPartial[]
   ) => {
-    if (!safeSDK || !state.safeAddress)
-      throw new Error("Safe or wallet not ready");
+    if (!safeSDK || !state.safeAddress) throw new Error("Safe not ready");
+    if (!address || !network.chainId) throw new Error("Failed connection");
+
+    const signer = getEthersProvider().getSigner();
 
     if (!state.isDeployed) {
-      const { underlyingToken } = await getSignerAndContract(
-        network.chainId!.toString()
-      );
-
-      /* // Each transfer requires user to sign the Permit2 tx
-      const permitTx = await getPermit2TransferTx({
-        owner: address!,
-        token,
-        amount,
-        deadline,
-        to: safeAddress,
-        publicClient: publicClient!,
-        walletClient: walletClient!,
-        chainId: network.chainId! as number,
-      });
-      if (permitTx) txs.push(permitTx); */
+      const chainId = network.chainId.toString();
+      const { underlyingToken } = await getSignerAndContract(chainId);
 
       // User's one time approval to Permit2 to transfer tokens from user to safe
       const permitApproveTx = getPermit2ApproveTx({
@@ -155,7 +143,9 @@ export function useSafeLinkedAccount() {
         spender: state.safeAddress,
       });
       if (!permitApproveTx) throw new Error("Permit2 approve tx not found");
-      txs = [permitApproveTx, ...txs];
+
+      const txResponse = await signer.sendTransaction(permitApproveTx);
+      await txResponse.wait();
     }
 
     const safeTx = await safeSDK.createTransaction({
@@ -173,47 +163,24 @@ export function useSafeLinkedAccount() {
       txsBatch = signedSafeTx as unknown as Transaction;
     }
 
-    const signer = getEthersProvider().getSigner();
     const txResponse = await signer.sendTransaction(txsBatch);
-    /* const txResponse = await signer.sendTransaction({
-      to: deploymentTxs.to,
-      data: deploymentTxs.data,
-      value: deploymentTxs.value ?? 0,
-    }); */
-
     await txResponse.wait();
   };
 
-  const executeDepositRequestWorkflow = async (
-    amount: string,
-    wrapNativeToken: boolean
-  ) => {
-    if (!safeSDK || !state.safeAddress)
-      throw new Error("Safe or wallet not ready");
+  const executeDepositRequestWorkflow = async (amount: string) => {
+    if (!safeSDK || !state.safeAddress) throw new Error("Safe not ready");
+    if (!address || !network.chainId) throw new Error("Failed connection");
 
     const txs: SafeTransactionDataPartial[] = [];
+    const chainId = network.chainId.toString();
     const { underlyingToken, vault, tokenMetadata } =
-      await getSignerAndContract(network.chainId!.toString());
-
-    if (wrapNativeToken) {
-      const wrapNativeETHTx = await getWrapNativeETHTx(
-        network.chainId!.toString()
-      );
-      if (wrapNativeETHTx) {
-        const wrapNativeETHTxCall = {
-          to: wrapNativeETHTx.target,
-          value: amount,
-          data: wrapNativeETHTx.callData,
-        };
-        txs.push(wrapNativeETHTxCall);
-      }
-    }
+      await getSignerAndContract(chainId);
 
     const amountInWei = parseUnits(amount, tokenMetadata.decimals);
 
     // Transfer tokens from user to safe using Permit2 if the one time approval is done
     const transferFromTx = getPermit2TransferFromTx({
-      from: address!,
+      from: address,
       to: state.safeAddress,
       amount: amountInWei,
       token: underlyingToken.address,
@@ -222,7 +189,7 @@ export function useSafeLinkedAccount() {
 
     // Approve tokens to be transferred from safe to the vault
     const approveTx = await getApproveTx(
-      network.chainId!.toString(),
+      chainId,
       state.safeAddress,
       vault.address,
       BigNumber.from(amountInWei)
@@ -234,6 +201,17 @@ export function useSafeLinkedAccount() {
         data: approveTx.callData,
       });
     }
+
+    // Request deposit
+    const requestDepositCall = {
+      to: vault.address,
+      value: "0",
+      data: vault.interface.encodeFunctionData(
+        "requestDeposit(uint256,address,address,address)",
+        [amountInWei, state.safeAddress, state.safeAddress, state.safeAddress]
+      ),
+    };
+    txs.push(requestDepositCall);
 
     await executeSafeBatchWorkflow(txs);
   };

@@ -24,11 +24,11 @@ export function getPermit2ApproveTx({
 }): {
   to: Address;
   data: `0x${string}`;
-  value: "0";
+  value: BigNumber;
 } {
   return {
     to: PERMIT2_ADDRESS,
-    value: "0",
+    value: BigNumber.from(0),
     data: encodeFunctionData({
       abi: Permit2Abi,
       functionName: "approve",

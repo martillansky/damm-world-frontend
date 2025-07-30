@@ -132,7 +132,12 @@ export function useDeposit() {
     if (!safeAddress || !isDeployed || isLoading)
       throw new Error("Safe not linked");
 
-    await executeDepositRequestWorkflow(amount, wrapNativeToken);
+    if (wrapNativeToken) {
+      // Wrap native token to WETH: must be triggered by user
+      await wrapNativeETH(network.chainId!.toString(), amount);
+    }
+
+    await executeDepositRequestWorkflow(amount);
   };
 
   return {
