@@ -8,11 +8,12 @@ import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { TransactionResponse } from "@ethersproject/providers";
 import { ethers, Signer } from "ethers";
+import { keccak256, toBytes } from "viem";
 import { getTokenMetadata, TokenMetadata } from "./TokenMetadata";
 
-export function toBytes(hex: string): string {
+/* export function toBytes(hex: string): string {
   return hex.startsWith("0x") ? hex : `0x${hex}`;
-}
+} */
 
 export async function getSignerAndContract(chainId: string) {
   const signer: Signer = await getSigner();
@@ -73,4 +74,16 @@ export function getEthersProvider(): ethers.providers.Web3Provider {
   } else {
     throw new Error("No injected provider found (e.g., MetaMask).");
   }
+}
+
+export function toNonce(number: number): `0x${string}` {
+  return keccak256(toBytes(number.toString())) as `0x${string}`;
+}
+
+export function randomInteger(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+export function randomNonceInteger() {
+  return randomInteger(0, 100000000 * 100000000);
 }

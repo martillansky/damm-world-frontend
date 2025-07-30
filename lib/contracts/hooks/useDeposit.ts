@@ -9,10 +9,13 @@ import {
   wrapNativeETH,
 } from "../utils/TokenUtils";
 import { getSignerAndContract } from "../utils/utils";
+import { useSafeLinkedAccount } from "./useSafeLinkedAccount";
 
 export function useDeposit() {
   const { address } = useAccount();
   const network = useAppKitNetwork();
+  const { safeAddress, isDeployed, isLoading, executeDepositRequestWorkflow } =
+    useSafeLinkedAccount();
 
   const cancelDepositRequest = async () => {
     if (!address) throw new Error("No address found");
@@ -121,9 +124,21 @@ export function useDeposit() {
     }
   };
 
+  const submitRequestDepositOnSafe = async (
+    amount: string,
+    wrapNativeToken: boolean
+  ) => {
+    if (!address) throw new Error("No address found");
+    if (!safeAddress || !isDeployed || isLoading)
+      throw new Error("Safe not linked");
+
+    await executeDepositRequestWorkflow(amount, wrapNativeToken);
+  };
+
   return {
     submitRequestDeposit,
     submitRequestDepositOnMulticall,
+    submitRequestDepositOnSafe,
     cancelDepositRequest,
   };
 }
