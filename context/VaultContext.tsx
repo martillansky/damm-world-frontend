@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { useVaultData } from "../lib/api/hooks/VaultData";
+import { useSafeLinkedAccountContext } from "./SafeLinkedAccountContext";
 
 interface VaultContextType {
   vault: DataPresenter | null;
@@ -26,8 +27,11 @@ interface VaultProviderProps {
 
 export function VaultProvider({ children }: VaultProviderProps) {
   const { address } = useAppKitAccount();
+  const { safeAddress } = useSafeLinkedAccountContext();
+
   const [vault, setVault] = useState<DataPresenter | null>(null);
-  const { data, isLoading } = useVaultData(address ?? "");
+  const { data, isLoading } = useVaultData(safeAddress ?? "");
+  //const { data, isLoading } = useVaultData(address ?? "");
 
   useEffect(() => {
     if (isLoading || !address) {

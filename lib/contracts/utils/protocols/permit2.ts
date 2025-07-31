@@ -143,7 +143,7 @@ export function getPermit2TransferFromTx({
   token,
 }: {
   from: Address; // EOA
-  to: Address; // receiver (Safe or vault)
+  to: Address; // receiver (Safe)
   amount: bigint;
   token: Address;
 }): {
@@ -160,4 +160,32 @@ export function getPermit2TransferFromTx({
       args: [from, to, amount, token],
     }),
   };
+}
+
+export async function isPermit2Approved({
+  token,
+  owner,
+  spender,
+  publicClient,
+}: {
+  token: Address;
+  owner: Address;
+  spender: Address;
+  publicClient: PublicClient;
+}): Promise<boolean> {
+  const allowance = (await publicClient.readContract({
+    address: PERMIT2_ADDRESS,
+    abi: Permit2Abi,
+    functionName: "allowance",
+    args: [owner, token, spender],
+  })) as [bigint, bigint, bigint];
+
+  const requiredAmount = BigNumber.from(MAX_UINT160);
+  const isApproved = BigNumber.from(allowance[0]).gte(requiredAmount);
+
+  const expiration = allowance[1];
+  const now = BigInt(Math.floor(Date.now() / 1000)); // current time in seconds as BigInt
+  const isExpired = expiration < now;
+
+  return isApproved && !isExpired;
 }
