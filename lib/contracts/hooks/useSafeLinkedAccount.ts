@@ -221,10 +221,8 @@ export function useSafeLinkedAccount() {
       onlyCalls: true,
     });
 
-    const signedSafeTx: SafeTransaction = await safeSDK.signTransaction(safeTx);
-
     if (state.isDeployed) {
-      const txResponse = await safeSDK.executeTransaction(signedSafeTx);
+      const txResponse = await safeSDK.executeTransaction(safeTx);
       return {
         hash: txResponse.hash,
         wait: () =>
@@ -234,6 +232,7 @@ export function useSafeLinkedAccount() {
       };
     }
 
+    const signedSafeTx: SafeTransaction = await safeSDK.signTransaction(safeTx);
     const deploymentBatch: Transaction =
       await safeSDK.wrapSafeTransactionIntoDeploymentBatch(signedSafeTx);
 
