@@ -17,6 +17,7 @@ import {
   createWalletClient,
   custom,
   parseUnits,
+  publicActions,
   WalletClient,
 } from "viem";
 import { parseAccount } from "viem/accounts";
@@ -90,9 +91,7 @@ export function useSafeLinkedAccount() {
           },
           safeDeploymentConfig: {
             saltNonce: saltNonce,
-            //safeVersion: "1.5.0" as SafeVersion,
-            //safeVersion: "1.4.1",
-            //safeVersion: "1.3.0",
+            safeVersion: "1.4.1",
           },
         };
 
@@ -107,17 +106,21 @@ export function useSafeLinkedAccount() {
           transport: custom(safeProvider),
         });
 
+        const contractNetworks = getContractNetworks({
+          version: "1.4.1",
+          released: true,
+          network: network.chainId!.toString(),
+        });
+
         const safeConfig: SafeConfig = {
           provider: client.transport,
           signer: address,
           predictedSafe,
-          contractNetworks: getContractNetworks({
-            network: network.chainId!.toString(),
-          }),
-          //isL1SafeSingleton: true,
+          contractNetworks: contractNetworks,
+          isL1SafeSingleton: true,
         };
 
-        const sdk = await Safe.init(safeConfig);
+        let sdk = await Safe.init(safeConfig);
 
         const safeAddress = await sdk.getAddress();
         console.log("SAFE ADDRESS", safeAddress);
@@ -125,6 +128,21 @@ export function useSafeLinkedAccount() {
         console.log("IS DEPLOYED", isDeployed);
         const contractVersion = sdk.getContractVersion();
         console.log("CONTRACT VERSION", contractVersion);
+
+        if (isDeployed) {
+          const safeConfig: SafeConfig = {
+            provider: client.transport,
+            signer: address,
+            safeAddress: safeAddress,
+            contractNetworks: contractNetworks,
+          };
+          sdk = await Safe.init(safeConfig);
+          sdk = await sdk.connect({
+            signer: address,
+            safeAddress: safeAddress,
+          });
+        }
+
         setSafeSDK(sdk);
 
         setClient(client);
@@ -206,61 +224,14 @@ export function useSafeLinkedAccount() {
     const signedSafeTx: SafeTransaction = await safeSDK.signTransaction(safeTx);
 
     if (state.isDeployed) {
-      const params = {
-        account: address as `0x${string}`,
-        to: signedSafeTx.data.to as `0x${string}`,
-        value: BigInt(signedSafeTx.data.value),
-        data: signedSafeTx.data.data as `0x${string}`,
-        chain: client.chain as Chain,
-      };
-      const request = await client.prepareTransactionRequest(params);
-      const txHash = await client.sendTransaction({
-        account: address as `0x${string}`,
-        ...request,
-      });
-      return {
-        hash: txHash,
-        wait: () => publicClient!.waitForTransactionReceipt({ hash: txHash }),
-      };
-
-      /* const txResponse = await safeSDK.executeTransaction(signedSafeTx);
-      return txResponse as unknown as TransactionResponse; */
-
-      /* console.log("CONNECTING TO SAFE");
-      const safeConfig: SafeConfig = {
-        provider: client.transport,
-        signer: address,
-        safeAddress: state.safeAddress,
-        contractNetworks: getContractNetworks({
-          network: network.chainId!.toString(),
-        }),
-      };
-      console.log("SAFE CONFIG", safeConfig);
-      const sdk = await Safe.init(safeConfig);
-      console.log("SDK", sdk);
-      const connectedSdk = await sdk.connect({
-        signer: address, // Optional
-        safeAddress: state.safeAddress, // Optional
-      });
-      console.log("CONNECTED SDK", connectedSdk);
-      const safeTx: SafeTransaction = await connectedSdk.createTransaction({
-        transactions: txs,
-        onlyCalls: true,
-      });
-      console.log("SAFE TXs", txs);
-
-      const signedSafeTx: SafeTransaction = await connectedSdk.signTransaction(
-        safeTx
-      );
-
-      const txResponse = await connectedSdk.executeTransaction(signedSafeTx);
+      const txResponse = await safeSDK.executeTransaction(signedSafeTx);
       return {
         hash: txResponse.hash,
         wait: () =>
-          publicClient!.waitForTransactionReceipt({
+          client.extend(publicActions).waitForTransactionReceipt({
             hash: txResponse.hash as `0x${string}`,
           }),
-      }; */
+      };
     }
 
     const deploymentBatch: Transaction =
@@ -282,13 +253,10 @@ export function useSafeLinkedAccount() {
 
     return {
       hash: txHash,
-      wait: () => publicClient!.waitForTransactionReceipt({ hash: txHash }),
-      /* wait: async () => {
-          const { receipts } = await client.waitForCallsStatus({
-            id: txHash,
-          });
-          return receipts?.[0];
-        }, */
+      wait: () =>
+        client
+          .extend(publicActions)
+          .waitForTransactionReceipt({ hash: txHash }),
     };
   };
 
