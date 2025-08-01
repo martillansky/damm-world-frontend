@@ -25,8 +25,11 @@ import { usePublicClient, useWalletClient } from "wagmi";
 import { getContractNetworks } from "../utils/protocols/gnosis";
 import {
   getPermit2ApproveTx,
+  //getPermit2PermitTx,
+  //getPermit2Signature,
   getPermit2TransferFromTx,
   isPermit2Approved,
+  //isPermit2Permited,
   MAX_UINT160,
   PERMIT2_ADDRESS,
 } from "../utils/protocols/permit2";
@@ -181,6 +184,32 @@ export function useSafeLinkedAccount() {
       const chainId = network.chainId.toString();
       const { underlyingToken } = await getSignerAndContract(chainId);
 
+      /* // Allows to verify user's EIP712 signature on Permit2 to update their allowance
+      const shouldTriggerPermit = await isPermit2Permited({
+        token: underlyingToken.address,
+        owner: address,
+        spender: state.safeAddress,
+        publicClient: publicClient!,
+      });
+
+      if (shouldTriggerPermit) {
+        const { permit, signature } = await getPermit2Signature({
+          token: underlyingToken.address,
+          spender: state.safeAddress,
+          owner: address,
+          chainId: Number(chainId),
+          publicClient: publicClient!,
+          walletClient: walletClient!,
+        });
+
+        const permitTx = getPermit2PermitTx({
+          owner: address,
+          permit,
+          signature,
+        });
+        txs = [permitTx, ...txs];
+      } */
+
       // Approve underlying token to transfer on Permit2
       const approveTx = await getApproveTx(
         chainId,
@@ -196,6 +225,8 @@ export function useSafeLinkedAccount() {
         });
         await txResponse.wait();
       }
+
+      // Allows to update user's allowance on Permit2 to transfer tokens from user to safe
       const isPermit2ApprovalRequired = !(await isPermit2Approved({
         token: underlyingToken.address,
         owner: address,
@@ -204,7 +235,6 @@ export function useSafeLinkedAccount() {
       }));
 
       if (isPermit2ApprovalRequired) {
-        // User's one time approval to Permit2 to transfer tokens from user to safe
         const permitApproveTx = getPermit2ApproveTx({
           token: underlyingToken.address,
           spender: state.safeAddress,

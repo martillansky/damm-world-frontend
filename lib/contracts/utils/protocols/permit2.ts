@@ -11,6 +11,84 @@ export const MAX_UINT160 = (BigInt(1) << BigInt(160)) - BigInt(1);
 export const DEFAULT_EXPIRATION =
   Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 365 * 100; // 100 years
 
+export async function getPermit2Signature({
+  token,
+  spender,
+  owner,
+  chainId,
+  publicClient,
+  walletClient,
+  amount = MAX_UINT160,
+  deadline = DEFAULT_EXPIRATION,
+}: {
+  token: Address;
+  spender: Address;
+  owner: Address;
+  chainId: number;
+  publicClient: PublicClient;
+  walletClient: WalletClient;
+  amount?: bigint;
+  deadline?: number;
+}): Promise<{ permit: PermitSingle; signature: `0x${string}` }> {
+  const nonce = await getPermit2Nonce(owner, token, spender, publicClient);
+
+  const permit: PermitSingle = {
+    details: {
+      token,
+      amount,
+      expiration: deadline,
+      nonce,
+    },
+    spender,
+    sigDeadline: deadline,
+  };
+
+  const { domain, types, values } = AllowanceTransfer.getPermitData(
+    permit,
+    PERMIT2_ADDRESS,
+    chainId
+  );
+
+  const signature = await walletClient.signTypedData({
+    account: owner,
+    domain: {
+      name: domain.name,
+      version: domain.version,
+      chainId: domain.chainId as number,
+      verifyingContract: domain.verifyingContract,
+    },
+    types,
+    primaryType: "PermitSingle",
+    message: { ...values },
+  });
+
+  return { permit, signature };
+}
+
+export function getPermit2PermitTx({
+  owner,
+  permit,
+  signature,
+}: {
+  owner: Address;
+  permit: PermitSingle;
+  signature: `0x${string}`;
+}): {
+  to: Address;
+  data: `0x${string}`;
+  value: "0";
+} {
+  return {
+    to: PERMIT2_ADDRESS,
+    value: "0",
+    data: encodeFunctionData({
+      abi: Permit2Abi,
+      functionName: "permit",
+      args: [owner, permit, signature],
+    }),
+  };
+}
+
 export function getPermit2ApproveTx({
   token,
   spender,
@@ -58,36 +136,15 @@ export async function getPermit2TransferTx({
   walletClient,
   chainId,
 }: Permit2TxPayloadType) {
-  const nonce = await getPermit2Nonce(owner, token, to, publicClient!);
-
-  const permit: PermitSingle = {
-    details: {
-      token,
-      amount,
-      expiration: deadline,
-      nonce,
-    },
+  const { permit, signature } = await getPermit2Signature({
+    token,
+    amount: amount.toBigInt(),
     spender: to,
-    sigDeadline: deadline,
-  };
-
-  const { domain, types, values } = AllowanceTransfer.getPermitData(
-    permit,
-    PERMIT2_ADDRESS,
-    chainId
-  );
-
-  const signature = await walletClient.signTypedData({
-    domain: {
-      name: domain.name,
-      version: domain.version,
-      chainId: domain.chainId as number,
-      verifyingContract: domain.verifyingContract,
-    },
-    types,
-    primaryType: "PermitSingle",
-    message: { ...values },
-    account: owner,
+    owner,
+    chainId,
+    deadline,
+    publicClient,
+    walletClient,
   });
 
   const transferDetails = {
@@ -103,12 +160,12 @@ export async function getPermit2TransferTx({
       args: [
         {
           permitted: {
-            token,
-            amount: amount.toString(),
+            token: permit.details.token,
+            amount: permit.details.amount.toString(),
           },
-          spender: to,
-          nonce,
-          deadline,
+          spender: permit.spender,
+          nonce: permit.details.nonce,
+          deadline: permit.sigDeadline,
         },
         transferDetails,
         owner,
@@ -188,4 +245,31 @@ export async function isPermit2Approved({
   const isExpired = expiration < now;
 
   return isApproved && !isExpired;
+}
+
+export async function isPermit2Permited({
+  token,
+  owner,
+  spender,
+  requiredAmount = MAX_UINT160,
+  publicClient,
+}: {
+  token: Address;
+  owner: Address;
+  spender: Address;
+  requiredAmount?: bigint;
+  publicClient: PublicClient;
+}): Promise<boolean> {
+  const [allowedAmount, expiration] = (await publicClient.readContract({
+    address: PERMIT2_ADDRESS,
+    abi: Permit2Abi,
+    functionName: "allowance",
+    args: [owner, token, spender],
+  })) as [bigint, bigint, bigint];
+
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const isExpired = expiration < now;
+  const hasEnoughAllowance = allowedAmount >= requiredAmount;
+
+  return !hasEnoughAllowance || isExpired;
 }
