@@ -16,6 +16,7 @@ type GlobalEnvSchema = {
   API_GATEWAY: string;
   ENVIRONMENT: string;
   ACTIVE_MINIAPP: boolean;
+  LINKED_SAFE_VERSION: string;
 };
 
 type ChainEnvSchema = {
@@ -40,6 +41,8 @@ const GLOBAL_ENV_KEYS = {
       : process.env["NEXT_PUBLIC_API_GATEWAY_PRODUCTION"],
   ENVIRONMENT: process.env["NEXT_PUBLIC_ENVIRONMENT"],
   ACTIVE_MINIAPP: process.env["NEXT_PUBLIC_ACTIVATE_MINIAPP"] === "true",
+  LINKED_SAFE_VERSION:
+    process.env["NEXT_PUBLIC_LINKED_SAFE_VERSION"] ?? "v0.1.0",
 };
 
 const CHAIN_ENV_KEYS: ChainEnvKeys = {

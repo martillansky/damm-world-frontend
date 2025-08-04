@@ -22,17 +22,12 @@ import {
 } from "viem";
 import { parseAccount } from "viem/accounts";
 import { usePublicClient, useWalletClient } from "wagmi";
-import { getContractNetworks } from "../utils/protocols/gnosis";
 import {
-  getPermit2ApproveTx,
-  //getPermit2PermitTx,
-  //getPermit2Signature,
-  getPermit2TransferFromTx,
-  isPermit2Approved,
-  //isPermit2Permited,
-  MAX_UINT160,
-  PERMIT2_ADDRESS,
-} from "../utils/protocols/permit2";
+  getERC20ApproveTx,
+  getERC20TransferFromTx,
+  isERC20Approved,
+} from "../utils/protocols/eip2612";
+import { getContractNetworks } from "../utils/protocols/gnosis";
 import { getApproveTx } from "../utils/TokenUtils";
 import {
   getDeterministicSaltNonce,
@@ -184,64 +179,22 @@ export function useSafeLinkedAccount() {
       const chainId = network.chainId.toString();
       const { underlyingToken } = await getSignerAndContract(chainId);
 
-      /* // Allows to verify user's EIP712 signature on Permit2 to update their allowance
-      const shouldTriggerPermit = await isPermit2Permited({
-        token: underlyingToken.address,
-        owner: address,
-        spender: state.safeAddress,
-        publicClient: publicClient!,
-      });
-
-      if (shouldTriggerPermit) {
-        const { permit, signature } = await getPermit2Signature({
-          token: underlyingToken.address,
-          spender: state.safeAddress,
-          owner: address,
-          chainId: Number(chainId),
-          publicClient: publicClient!,
-          walletClient: walletClient!,
-        });
-
-        const permitTx = getPermit2PermitTx({
-          owner: address,
-          permit,
-          signature,
-        });
-        txs = [permitTx, ...txs];
-      } */
-
-      // Approve underlying token to transfer on Permit2
-      const approveTx = await getApproveTx(
-        chainId,
-        address,
-        PERMIT2_ADDRESS,
-        BigNumber.from(MAX_UINT160)
-      );
-      if (approveTx) {
-        const txResponse = await signer.sendTransaction({
-          to: approveTx.target,
-          value: "0",
-          data: approveTx.callData,
-        });
-        await txResponse.wait();
-      }
-
-      // Allows to update user's allowance on Permit2 to transfer tokens from user to safe
-      const isPermit2ApprovalRequired = !(await isPermit2Approved({
+      // Allows to update user's allowance on token contract to transfer tokens from user to safe
+      const isERC20ApprovalRequired = !(await isERC20Approved({
         token: underlyingToken.address,
         owner: address,
         spender: state.safeAddress,
         publicClient: publicClient!,
       }));
 
-      if (isPermit2ApprovalRequired) {
-        const permitApproveTx = getPermit2ApproveTx({
+      if (isERC20ApprovalRequired) {
+        const erc20ApproveTx = getERC20ApproveTx({
           token: underlyingToken.address,
           spender: state.safeAddress,
         });
-        if (!permitApproveTx) throw new Error("Permit2 approve tx not found");
+        if (!erc20ApproveTx) throw new Error("ERC20 approve tx not found");
 
-        const txResponse = await signer.sendTransaction(permitApproveTx);
+        const txResponse = await signer.sendTransaction(erc20ApproveTx);
         await txResponse.wait();
       }
     }
@@ -262,9 +215,10 @@ export function useSafeLinkedAccount() {
       };
     }
 
-    const signedSafeTx: SafeTransaction = await safeSDK.signTransaction(safeTx);
+    // Safe with unique owner, no need to sign transaction
+    // const signedSafeTx: SafeTransaction = await safeSDK.signTransaction(safeTx);
     const deploymentBatch: Transaction =
-      await safeSDK.wrapSafeTransactionIntoDeploymentBatch(signedSafeTx);
+      await safeSDK.wrapSafeTransactionIntoDeploymentBatch(safeTx);
 
     const params = {
       to: deploymentBatch.to as `0x${string}`,
@@ -289,25 +243,43 @@ export function useSafeLinkedAccount() {
     };
   };
 
-  const executeDepositRequestWorkflow = async (amount: string) => {
-    if (!safeSDK || !state.safeAddress) throw new Error("Safe not ready");
+  const executeFundSmartAccountWorkflow = async (amount: string) => {
+    if (!safeSDK || !state.safeAddress || !client)
+      throw new Error("Safe not ready");
     if (!address || !network.chainId) throw new Error("Failed connection");
 
     const txs: SafeTransactionDataPartial[] = [];
     const chainId = network.chainId.toString();
-    const { underlyingToken, vault, tokenMetadata } =
-      await getSignerAndContract(chainId);
+    const { underlyingToken, tokenMetadata } = await getSignerAndContract(
+      chainId
+    );
 
     const amountInWei = parseUnits(amount, tokenMetadata.decimals);
 
-    // Transfer tokens from user to safe using Permit2 if the one time approval is done
-    const transferFromTx = getPermit2TransferFromTx({
+    // Transfer tokens from user to safe if the one time approval is done
+    const transferFromTx = getERC20TransferFromTx({
       from: address,
       to: state.safeAddress,
       amount: amountInWei,
       token: underlyingToken.address,
     });
     if (transferFromTx) txs.push(transferFromTx);
+
+    //const txResponse = await deploySafeOnly();
+    const txResponse = await executeSafeBatchWorkflow(txs);
+    return txResponse as unknown as TransactionResponse;
+  };
+
+  const executeDepositRequestWorkflow = async (amount: string) => {
+    if (!safeSDK || !state.safeAddress || !client)
+      throw new Error("Safe not ready");
+    if (!address || !network.chainId) throw new Error("Failed connection");
+
+    const txs: SafeTransactionDataPartial[] = [];
+    const chainId = network.chainId.toString();
+    const { vault, tokenMetadata } = await getSignerAndContract(chainId);
+
+    const amountInWei = parseUnits(amount, tokenMetadata.decimals);
 
     // Approve tokens to be transferred from safe to the vault
     const approveTx = await getApproveTx(
@@ -335,9 +307,23 @@ export function useSafeLinkedAccount() {
     };
     txs.push(requestDepositCall);
 
-    //const txResponse = await deploySafeOnly();
-    const txResponse = await executeSafeBatchWorkflow(txs);
-    return txResponse as unknown as TransactionResponse;
+    const safeTx: SafeTransaction = await safeSDK.createTransaction({
+      transactions: txs,
+      onlyCalls: true,
+    });
+
+    if (state.isDeployed) {
+      const txResponse = await safeSDK.executeTransaction(safeTx);
+      return {
+        hash: txResponse.hash,
+        wait: () =>
+          client.extend(publicActions).waitForTransactionReceipt({
+            hash: txResponse.hash as `0x${string}`,
+          }),
+      };
+    } else {
+      throw new Error("Safe not deployed, cannot execute deposit request");
+    }
   };
 
   const deploySafeOnly = async () => {
@@ -358,6 +344,7 @@ export function useSafeLinkedAccount() {
   return {
     ...state,
     executeSafeBatchWorkflow,
+    executeFundSmartAccountWorkflow,
     executeDepositRequestWorkflow,
     deploySafeOnly,
   };

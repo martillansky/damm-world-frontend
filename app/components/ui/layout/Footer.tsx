@@ -2,6 +2,7 @@ import { useView, View } from "@/context/ViewContext";
 import { useAppKitAccount } from "@reown/appkit/react";
 import ActivityIcon from "../../icons/ActivityIcon";
 import PositionIcon from "../../icons/PositionIcon";
+import SmartAccountIcon from "../../icons/SmartAccountIcon";
 import VaultIcon from "../../icons/VaultIcon";
 
 export default function Footer() {
@@ -16,7 +17,14 @@ export default function Footer() {
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-surface-light/90 dark:bg-zinc-900/90 backdrop-blur-md border-t border-border-light dark:border-zinc-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-around py-2">
+        <div className="flex justify-center items-center py-2 gap-8">
+          <FooterButton
+            label="Fund"
+            icon={<SmartAccountIcon />}
+            active={view === "smartAccount"}
+            onClick={() => handleViewChange("smartAccount")}
+          />
+          <div className="w-px h-8 bg-border-light dark:bg-zinc-700" />
           <FooterButton
             label="Vault"
             icon={<VaultIcon />}

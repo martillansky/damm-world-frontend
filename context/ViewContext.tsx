@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, ReactNode, useContext, useTransition } from "react";
 
-export type View = "vault" | "position" | "activity";
+export type View = "smartAccount" | "vault" | "position" | "activity";
 
 interface ViewContextType {
   view: View;
@@ -24,11 +24,12 @@ function parseViewFromPathname(pathname: string): View {
   if (
     maybeView === "vault" ||
     maybeView === "position" ||
-    maybeView === "activity"
+    maybeView === "activity" ||
+    maybeView === "smartAccount"
   ) {
     return maybeView;
   }
-  return "vault";
+  return "smartAccount";
 }
 
 function getBaseWalletPath(pathname: string): string | null {
