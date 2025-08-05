@@ -12,8 +12,10 @@ import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
 import Button from "./ui/common/Button";
-import Card, { CardRow } from "./ui/common/Card";
+import Card from "./ui/common/Card";
+import ChartCard from "./ui/common/ChartCard";
 import Dialog, {
   DialogActionButtons,
   DialogContents,
@@ -64,6 +66,7 @@ export default function SmartAccountView() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<ToastType>("info");
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     const retrieveNativeBalance = async () => {
@@ -204,33 +207,24 @@ export default function SmartAccountView() {
   return (
     vaultData && (
       <>
-        <Card
-          title="Vault Overview"
-          subtitle="Performance metrics for this liquidity vault"
-          variant="large"
+        <ChartCard
+          title="Vault Performance"
+          subtitle="Historical performance metrics and trends"
         >
-          <CardRow
-            left="TVL"
-            right={vaultData.tvl}
-            secondaryRight={vaultData.tvlChange}
-          />
-          <CardRow
-            left="APY (12h avg)"
-            tooltip="Average annual percentage rate based on the last 12 hours of performance."
-            highlightedRight
-            right={vaultData.apr}
-            secondaryRight={vaultData.aprChange}
-          />
-          <CardRow
-            left="Value Gained"
-            highlightedRight
-            right={vaultData.valueGained}
-            secondaryRight={vaultData.valueGainedUSD}
-          />
-          <CardRow
-            left="Your Position"
-            right={vaultData.position}
-            secondaryRight={vaultData.positionUSD}
+          <StackedAreaChart />
+        </ChartCard>
+        <Card title="Vaults" variant="small">
+          <Select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            options={["all", "WLD/USDC", "WLD/DAI", "WLD/USDT"]}
+            displayLabels={{
+              all: "All Vaults",
+              "WLD/USDC": "WLD/USDC",
+              "WLD/DAI": "WLD/DAI",
+              "WLD/USDT": "WLD/USDT",
+            }}
+            size="small"
           />
         </Card>
 
