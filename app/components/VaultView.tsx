@@ -12,6 +12,7 @@ import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { BaseActionKey, createActions } from "./ui/common/Action";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
 import Dialog, {
@@ -41,9 +42,10 @@ export default function VaultView() {
 
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
-  const [operation, setOperation] = useState<"deposit" | "withdraw" | null>(
-    null
-  );
+
+  type VaultActionKey = BaseActionKey & ("DEPOSIT" | "WITHDRAW");
+  const [operation, setOperation] = useState<VaultActionKey | null>(null);
+
   const [amount, setAmount] = useState("");
 
   const {
@@ -85,14 +87,14 @@ export default function VaultView() {
     getNativeBalance,
   ]);
 
-  const handleOperation = (op: "deposit" | "withdraw") => {
+  const handleOperation = (op: VaultActionKey) => {
     setOperation(op);
     setShowDialog(true);
   };
 
   const handleSubmit = async () => {
     setShowDialog(false);
-    if (operation === "deposit") {
+    if (operation === "DEPOSIT") {
       try {
         const wrapNativeToken =
           isUnderlyingWrapNative && selectedToken !== underlyingTokenSymb;
@@ -137,7 +139,7 @@ export default function VaultView() {
 
   const handleMaxClick = () => {
     setAmount(
-      operation === "deposit"
+      operation === "DEPOSIT"
         ? selectedToken === underlyingTokenSymb
           ? walletBalance
           : walletNativeBalance
@@ -182,16 +184,26 @@ export default function VaultView() {
   }, [getBalanceOf, address]);
 
   useEffect(() => {
+    const actions = createActions(["DEPOSIT", "WITHDRAW"], {
+      DEPOSIT: {
+        label: "Deposit",
+        icon: <ArrowUpIcon />,
+        onClick: () => handleOperation("DEPOSIT"),
+      },
+      WITHDRAW: {
+        label: "Withdraw",
+        icon: <ArrowDownIcon />,
+        onClick: () => handleOperation("WITHDRAW"),
+      },
+    });
     setActions(
       <>
-        <Button onClick={() => handleOperation("deposit")}>
-          <ArrowUpIcon />
-          <span>Deposit</span>
-        </Button>
-        <Button onClick={() => handleOperation("withdraw")}>
-          <ArrowDownIcon />
-          <span>Withdraw</span>
-        </Button>
+        {actions.map((action) => (
+          <Button key={action.label} onClick={action.onClick}>
+            {action.icon}
+            <span>{action.label}</span>
+          </Button>
+        ))}
       </>
     );
     return () => setActions(null); // Clean up when component unmounts
@@ -239,13 +251,13 @@ export default function VaultView() {
           open={showDialog}
           onClose={() => setShowDialog(false)}
           title={
-            operation === "deposit"
+            operation === "DEPOSIT"
               ? `Deposit ${underlyingTokenSymb}`
               : `Withdraw ${underlyingTokenSymb}`
           }
         >
           <DialogContents>
-            {operation === "deposit" &&
+            {operation === "DEPOSIT" &&
               !!isUnderlyingWrapNative &&
               isUnderlyingWrapNative && (
                 <Select
@@ -258,7 +270,7 @@ export default function VaultView() {
             <Input
               type="number"
               label={`Amount (${
-                operation === "deposit" ? selectedToken : underlyingTokenSymb
+                operation === "DEPOSIT" ? selectedToken : underlyingTokenSymb
               })`}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -266,7 +278,7 @@ export default function VaultView() {
               labelMax={
                 <>
                   Max:{" "}
-                  {operation === "deposit"
+                  {operation === "DEPOSIT"
                     ? selectedToken === underlyingTokenSymb
                       ? walletBalance + " " + underlyingTokenSymb
                       : walletNativeBalance + " " + underlyingNativeTokenSymb
@@ -276,7 +288,7 @@ export default function VaultView() {
               placeholder="0.0"
             />
 
-            {operation === "deposit" && (
+            {operation === "DEPOSIT" && (
               <ObservationCard title="Deposit Process">
                 This is a two-step process:
                 <br />
@@ -286,7 +298,7 @@ export default function VaultView() {
               </ObservationCard>
             )}
 
-            {operation === "withdraw" && (
+            {operation === "WITHDRAW" && (
               <>
                 <ObservationCard title="Withdrawal Process">
                   This is a two-step process:
@@ -311,7 +323,7 @@ export default function VaultView() {
               Cancel
             </Button>
             <Button onClick={handleSubmit}>
-              {operation === "deposit" ? "Deposit" : "Withdraw"}
+              {operation === "DEPOSIT" ? "Deposit" : "Withdraw"}
             </Button>
           </DialogActionButtons>
         </Dialog>

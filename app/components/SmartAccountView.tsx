@@ -1,5 +1,7 @@
 import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
+import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
@@ -10,12 +12,12 @@ import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
+import { BaseActionKey, createActions } from "./ui/common/Action";
 import Button from "./ui/common/Button";
-import Card from "./ui/common/Card";
-import ChartCard from "./ui/common/ChartCard";
+import Card, { CardRow } from "./ui/common/Card";
 import Dialog, {
   DialogActionButtons,
   DialogContents,
@@ -31,6 +33,8 @@ import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 export default function SmartAccountView() {
   const { address } = useParams();
   const network = useAppKitNetwork();
+  const { safeAddress, availableSupply, shares, isDeployed } =
+    useSafeLinkedAccountContext();
   const { vault, isLoading } = useVault();
   const queryClient = useQueryClient();
   const { isChangingView, setViewLoaded } = useView();
@@ -40,10 +44,12 @@ export default function SmartAccountView() {
   );
   const { submitRequestDepositOnSafe } = useDeposit();
   const { submitRequestWithdraw } = useWithdraw();
-
+  const { theme } = useTheme();
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
-  const [operation, setOperation] = useState<"deposit" | "withdraw" | null>(
+
+  type SmartAccountActionKey = BaseActionKey & ("SUPPLY" | "EXIT");
+  const [operation, setOperation] = useState<SmartAccountActionKey | null>(
     null
   );
   const [amount, setAmount] = useState("");
@@ -66,7 +72,6 @@ export default function SmartAccountView() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<ToastType>("info");
-  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     const retrieveNativeBalance = async () => {
@@ -88,29 +93,29 @@ export default function SmartAccountView() {
     getNativeBalance,
   ]);
 
-  const handleOperation = (op: "deposit" | "withdraw") => {
+  const handleOperation = (op: SmartAccountActionKey) => {
     setOperation(op);
     setShowDialog(true);
   };
 
   const handleSubmit = async () => {
     setShowDialog(false);
-    if (operation === "deposit") {
+    if (operation === "SUPPLY") {
       try {
         const wrapNativeToken =
           isUnderlyingWrapNative && selectedToken !== underlyingTokenSymb;
         const tx = await submitRequestDepositOnSafe(amount, wrapNativeToken);
-        setToastMessage("Deposit request submitted!");
+        setToastMessage("Supply request submitted!");
         setToastType("info");
         setShowToast(true);
 
         await tx.wait();
-        setToastMessage("Deposit request confirmed!");
+        setToastMessage("Supply request confirmed!");
         setToastType("success");
         setShowToast(true);
       } catch (error) {
-        console.error("Error in deposit process:", error);
-        setToastMessage("Error submitting deposit request");
+        console.error("Error in supply process:", error);
+        setToastMessage("Error submitting supply request");
         setToastType("error");
         setShowToast(true);
       }
@@ -140,7 +145,7 @@ export default function SmartAccountView() {
 
   const handleMaxClick = () => {
     setAmount(
-      operation === "deposit"
+      operation === "SUPPLY"
         ? selectedToken === underlyingTokenSymb
           ? walletBalance
           : walletNativeBalance
@@ -185,61 +190,126 @@ export default function SmartAccountView() {
   }, [getBalanceOf, address]);
 
   useEffect(() => {
+    let actions;
+    if (isDeployed) {
+      actions = createActions(["SUPPLY", "EXIT"], {
+        SUPPLY: {
+          label: "Supply",
+          icon: <ArrowUpIcon />,
+          onClick: () => handleOperation("SUPPLY"),
+        },
+        EXIT: {
+          label: "Exit",
+          icon: <ArrowDownIcon />,
+          onClick: () => handleOperation("EXIT"),
+        },
+      });
+    } else {
+      actions = createActions(["SUPPLY"], {
+        SUPPLY: {
+          label: "Initial Supply",
+          icon: <ArrowUpIcon />,
+          onClick: () => handleOperation("SUPPLY"),
+        },
+      });
+    }
     setActions(
       <>
-        <Button onClick={() => handleOperation("deposit")}>
-          <ArrowUpIcon />
-          <span>Deposit</span>
-        </Button>
-        <Button onClick={() => handleOperation("withdraw")}>
-          <ArrowDownIcon />
-          <span>Withdraw</span>
-        </Button>
+        {actions.map((action) => (
+          <Button key={action.label} onClick={action.onClick}>
+            {action.icon}
+            <span>{action.label}</span>
+          </Button>
+        ))}
       </>
     );
     return () => setActions(null); // Clean up when component unmounts
-  }, [setActions]);
+  }, [setActions, isDeployed]);
 
   if (isLoading || isChangingView || !vaultData) {
     return <LoadingComponent text="Loading vault data..." />;
   }
 
+  const safeAddressShort =
+    safeAddress?.slice(0, 6) + "..." + safeAddress?.slice(-4);
+  const explorerLink = `${
+    getEnvVars(getTypedChainId(Number(network.chainId))).BLOCK_EXPLORER_GATEWAY
+  }/address/${safeAddress}`;
+
   return (
     vaultData && (
       <>
-        <ChartCard
-          title="Vault Performance"
-          subtitle="Historical performance metrics and trends"
-        >
-          <StackedAreaChart />
-        </ChartCard>
-        <Card title="Vaults" variant="small">
-          <Select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            options={["all", "WLD/USDC", "WLD/DAI", "WLD/USDT"]}
-            displayLabels={{
-              all: "All Vaults",
-              "WLD/USDC": "WLD/USDC",
-              "WLD/DAI": "WLD/DAI",
-              "WLD/USDT": "WLD/USDT",
-            }}
-            size="small"
-          />
-        </Card>
+        {isDeployed ? (
+          <>
+            <Card title="Balance" variant="small">
+              <CardRow
+                left="Available supply"
+                right={`${availableSupply} ${underlyingTokenSymb}`}
+                //secondaryRight={vaultData.positionUSD}
+              />
+              <CardRow
+                left="Your shares"
+                right={`${shares} ${shareTokenSymb}`}
+                //secondaryRight={vaultData.positionUSD}
+              />
+            </Card>
+
+            <Card title="Deployment" variant="small">
+              <CardRow
+                left="Your private fund address"
+                right={
+                  <a
+                    href={explorerLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-lime-400 hover:underline drop-shadow-[0_0_1px_rgba(163,230,53,0.3)]"
+                  >
+                    {safeAddressShort}
+                  </a>
+                }
+              />
+            </Card>
+          </>
+        ) : (
+          <div className="flex flex-col items-center min-h-[calc(100vh-300px)]">
+            {/* Logo centered in available space */}
+            <div className="flex-1 flex items-center justify-center">
+              <Image
+                src={
+                  theme === "dark"
+                    ? "/Damm_Capital_Isotipo_Fondo Oscuro.png"
+                    : "/Damm_Capital_Isotipo_Fondo blanco.png"
+                }
+                alt="Damm Capital Logo"
+                className="h-48 w-auto"
+                width={356}
+                height={356}
+              />
+            </div>
+
+            {/* Card at the bottom */}
+            <div className="flex-1 flex items-center justify-end mb-8">
+              <Card
+                title="Welcome to DAMM World"
+                variant="small"
+                subtitle="Provide an initial supply to deploy your smart account and begin investing in our vaults."
+              />
+            </div>
+          </div>
+        )}
 
         {/* Dialog */}
         <Dialog
           open={showDialog}
           onClose={() => setShowDialog(false)}
           title={
-            operation === "deposit"
-              ? `Deposit ${underlyingTokenSymb}`
+            operation === "SUPPLY"
+              ? `Supply ${underlyingTokenSymb}`
               : `Withdraw ${underlyingTokenSymb}`
           }
         >
           <DialogContents>
-            {operation === "deposit" &&
+            {operation === "SUPPLY" &&
               !!isUnderlyingWrapNative &&
               isUnderlyingWrapNative && (
                 <Select
@@ -252,7 +322,7 @@ export default function SmartAccountView() {
             <Input
               type="number"
               label={`Amount (${
-                operation === "deposit" ? selectedToken : underlyingTokenSymb
+                operation === "SUPPLY" ? selectedToken : underlyingTokenSymb
               })`}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -260,7 +330,7 @@ export default function SmartAccountView() {
               labelMax={
                 <>
                   Max:{" "}
-                  {operation === "deposit"
+                  {operation === "SUPPLY"
                     ? selectedToken === underlyingTokenSymb
                       ? walletBalance + " " + underlyingTokenSymb
                       : walletNativeBalance + " " + underlyingNativeTokenSymb
@@ -270,31 +340,42 @@ export default function SmartAccountView() {
               placeholder="0.0"
             />
 
-            {operation === "deposit" && (
-              <ObservationCard title="Deposit Process">
-                This is a two-step process:
-                <br />
-                1. Your {underlyingTokenSymb} will be deposited into the vault
-                <br />
-                2. You&apos;ll receive {shareTokenSymb} shares
-              </ObservationCard>
+            {operation === "SUPPLY" && (
+              <>
+                {!isDeployed && (
+                  <ObservationCard title="Supply Process">
+                    This is a two-step process:
+                    <br />
+                    1. Your private DAMM investment fund will be deployed.
+                    <br />
+                    2. We request your authorization in advance to enable your
+                    private investment fund to borrow tokens from your wallet at
+                    your only request.
+                  </ObservationCard>
+                )}
+                <WarningCard title="Disclaimer">
+                  You will be able to:
+                  <br />- Supply {underlyingTokenSymb} tokens to your investment
+                  fund.
+                  <br />
+                  - Deposit and manage position in our vaults.
+                  <br />- Exit at anytime, receiving back the assets to your
+                  wallet.
+                </WarningCard>
+              </>
             )}
 
-            {operation === "withdraw" && (
+            {operation === "EXIT" && (
               <>
-                <ObservationCard title="Withdrawal Process">
-                  This is a two-step process:
-                  <br />
-                  1. Your {shareTokenSymb} shares will be burned
-                  <br />
-                  2. You&apos;ll need to redeem your {underlyingTokenSymb}{" "}
-                  assets after settlement
+                <ObservationCard title="Exit Process">
+                  In this process your available supply of {underlyingTokenSymb}{" "}
+                  tokens will deposited back to your wallet.
                 </ObservationCard>
 
-                <WarningCard title="Withdrawal Disclaimer">
-                  Withdrawn assets will stop generating yield and will no longer
-                  be part of the total value. Redeem them anytime after
-                  settlement.
+                <WarningCard title="Exit Disclaimer">
+                  To withdraw your shares, you must complete the required
+                  process in the respective vault leaving your supply available
+                  for exiting the fund.
                 </WarningCard>
               </>
             )}
@@ -305,7 +386,7 @@ export default function SmartAccountView() {
               Cancel
             </Button>
             <Button onClick={handleSubmit}>
-              {operation === "deposit" ? "Deposit" : "Withdraw"}
+              {operation === "SUPPLY" ? "Supply" : "Exit"}
             </Button>
           </DialogActionButtons>
         </Dialog>

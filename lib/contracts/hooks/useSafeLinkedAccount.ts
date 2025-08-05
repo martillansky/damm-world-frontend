@@ -11,6 +11,7 @@ import {
   Transaction,
 } from "@safe-global/types-kit";
 import { BigNumber } from "ethers";
+import { formatUnits } from "ethers/lib/utils";
 import { useEffect, useState } from "react";
 import {
   Chain,
@@ -40,6 +41,8 @@ interface SafeLinkedAccountState {
   isDeployed: boolean;
   isLoading: boolean;
   error: Error | null;
+  availableSupply: string;
+  shares: string;
 }
 
 export function useSafeLinkedAccount() {
@@ -55,6 +58,8 @@ export function useSafeLinkedAccount() {
     isDeployed: false,
     isLoading: false,
     error: null,
+    availableSupply: "0",
+    shares: "0",
   });
   const [safeSDK, setSafeSDK] = useState<Safe | null>(null);
   const [client, setClient] = useState<WalletClient | null>(null);
@@ -144,11 +149,25 @@ export function useSafeLinkedAccount() {
         setSafeSDK(sdk);
 
         setClient(client);
+        const { underlyingToken, vault, tokenMetadata } =
+          await getSignerAndContract(chain.id.toString());
         setState({
           safeAddress,
           isDeployed,
           isLoading: false,
           error: null,
+          availableSupply: isDeployed
+            ? formatUnits(
+                await underlyingToken.balanceOf(safeAddress),
+                tokenMetadata.decimals
+              )
+            : "0",
+          shares: isDeployed
+            ? formatUnits(
+                await vault.balanceOf(safeAddress),
+                tokenMetadata.decimals
+              )
+            : "0",
         });
       } catch (error) {
         console.log("ERROR INITIALIZING SAFE", error);
@@ -159,6 +178,8 @@ export function useSafeLinkedAccount() {
           isDeployed: false,
           isLoading: false,
           error: error as Error,
+          availableSupply: "0",
+          shares: "0",
         });
       }
     };

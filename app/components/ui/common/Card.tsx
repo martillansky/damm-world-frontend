@@ -60,7 +60,7 @@ interface CardProps {
   title: string;
   subtitle?: string;
   variant?: "large" | "small";
-  children: ReactElement<CardRowProps> | ReactElement<CardRowProps>[];
+  children?: ReactElement<CardRowProps> | ReactElement<CardRowProps>[];
   selector?: React.ReactNode;
 }
 

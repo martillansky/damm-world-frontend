@@ -72,14 +72,14 @@ export function getEthersProvider(): ethers.providers.Web3Provider {
   }
 }
 
-/* export function getDeterministicSaltNonce(address: string): `0x${string}` {
+export function getDeterministicSaltNonce(address: string): `0x${string}` {
   const hash = keccak256(toHex(address)); // returns a 32-byte hex string
   return hash as `0x${string}`;
-} */
+}
 
-export function getDeterministicSaltNonce(address: string): `0x${string}` {
+/* export function getDeterministicSaltNonce(address: string): `0x${string}` {
   const { LINKED_SAFE_VERSION } = getEnvVars();
   const input = toHex(`${address.toLowerCase()}-${LINKED_SAFE_VERSION}`);
   const hash = keccak256(input); // returns 32-byte hex string
   return hash as `0x${string}`;
-}
+} */

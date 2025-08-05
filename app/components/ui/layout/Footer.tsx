@@ -4,6 +4,7 @@ import ActivityIcon from "../../icons/ActivityIcon";
 import PositionIcon from "../../icons/PositionIcon";
 import SmartAccountIcon from "../../icons/SmartAccountIcon";
 import VaultIcon from "../../icons/VaultIcon";
+import VaultPerformanceIcon from "../../icons/VaultPerformanceIcon";
 
 export default function Footer() {
   const { view, setView } = useView();
@@ -17,12 +18,18 @@ export default function Footer() {
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-surface-light/90 dark:bg-zinc-900/90 backdrop-blur-md border-t border-border-light dark:border-zinc-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-center items-center py-2 gap-8">
+        <div className="flex justify-center items-center py-2 gap-6">
           <FooterButton
             label="Fund"
             icon={<SmartAccountIcon />}
             active={view === "smartAccount"}
             onClick={() => handleViewChange("smartAccount")}
+          />
+          <FooterButton
+            label="Metrics"
+            icon={<VaultPerformanceIcon />}
+            active={view === "metrics"}
+            onClick={() => handleViewChange("metrics")}
           />
           <div className="w-px h-8 bg-border-light dark:bg-zinc-700" />
           <FooterButton

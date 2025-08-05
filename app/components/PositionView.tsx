@@ -8,6 +8,7 @@ import ArrowRightIcon from "./icons/ArrowRightIcon"; */
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import RedeemIcon from "./icons/RedeemIcon";
+import { BaseActionKey, createActions } from "./ui/common/Action";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
 import Dialog, {
@@ -36,9 +37,9 @@ export default function PositionView() {
 
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
-  const [operation, setOperation] = useState<
-    "claim" | "send" | "redeem" | null
-  >(null);
+  type PositionActionKey = BaseActionKey & ("REDEEM" | "CLAIM" | "SEND");
+  const [operation, setOperation] = useState<PositionActionKey | null>(null);
+
   const [amount, setAmount] = useState("");
   const [recipientWallet, setRecipientWallet] = useState("");
 
@@ -48,14 +49,14 @@ export default function PositionView() {
     }
   }, [isLoading, positionData, setViewLoaded]);
 
-  const handleOperation = (op: "claim" | "send" | "redeem") => {
+  const handleOperation = (op: PositionActionKey) => {
     setOperation(op);
     setShowDialog(true);
   };
 
   const handleSubmit = async () => {
     setShowDialog(false);
-    if (operation === "redeem") {
+    if (operation === "REDEEM") {
       try {
         const tx = await submitRedeem(amount);
         setToastMessage("Redeem request submitted!");
@@ -81,27 +82,38 @@ export default function PositionView() {
 
   const handleMaxClick = () => {
     setAmount(
-      operation === "redeem"
+      operation === "REDEEM"
         ? positionData!.availableToRedeemRaw.toString()
         : ""
     );
   };
 
   useEffect(() => {
+    const actions = createActions(["REDEEM" /* "CLAIM", "SEND" */], {
+      REDEEM: {
+        label: "Redeem",
+        icon: <RedeemIcon />,
+        onClick: () => handleOperation("REDEEM"),
+      },
+      /* CLAIM: {
+        label: "Claim",
+        icon: <ArrowDownIcon />,
+        onClick: () => handleOperation("CLAIM"),
+      },
+      SEND: {
+        label: "Send",
+        icon: <ArrowRightIcon />,
+        onClick: () => handleOperation("SEND"),
+      }, */
+    });
     setActions(
       <>
-        <Button onClick={() => handleOperation("redeem")}>
-          <RedeemIcon />
-          <span>Redeem</span>
-        </Button>
-        {/* <Button onClick={() => handleOperation("claim")}>
-          <ArrowDownIcon />
-          <span>Claim</span>
-        </Button>
-        <Button onClick={() => handleOperation("send")}>
-          <ArrowRightIcon />
-          <span>Send</span>
-        </Button> */}
+        {actions.map((action) => (
+          <Button key={action.label} onClick={action.onClick}>
+            {action.icon}
+            <span>{action.label}</span>
+          </Button>
+        ))}
       </>
     );
     return () => setActions(null); // Clean up when component unmounts
@@ -158,9 +170,9 @@ export default function PositionView() {
           open={showDialog}
           onClose={() => setShowDialog(false)}
           title={
-            operation === "claim"
+            operation === "CLAIM"
               ? "Claim vWLD"
-              : operation === "redeem"
+              : operation === "REDEEM"
               ? "Redeem WLD"
               : "Send vWLD"
           }
@@ -168,18 +180,18 @@ export default function PositionView() {
           <DialogContents>
             <Input
               type="number"
-              label={`Amount (${operation === "redeem" ? "WLD" : "vWLD"})`}
+              label={`Amount (${operation === "REDEEM" ? "WLD" : "vWLD"})`}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               handleMaxClick={handleMaxClick}
               labelMax={`Max: ${
-                operation === "redeem" ? positionData!.availableToRedeemRaw : ""
+                operation === "REDEEM" ? positionData!.availableToRedeemRaw : ""
               }${" "}
-              ${operation === "redeem" ? "WLD" : "vWLD"}`}
+              ${operation === "REDEEM" ? "WLD" : "vWLD"}`}
               placeholder="0.0"
             />
 
-            {operation === "send" && (
+            {operation === "SEND" && (
               <>
                 <Input
                   type="text"
@@ -207,9 +219,9 @@ export default function PositionView() {
               Cancel
             </Button>
             <Button onClick={handleSubmit}>
-              {operation === "claim"
+              {operation === "CLAIM"
                 ? "Claim"
-                : operation === "redeem"
+                : operation === "REDEEM"
                 ? "Redeem"
                 : "Send"}
             </Button>
