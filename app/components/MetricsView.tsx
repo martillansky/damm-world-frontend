@@ -93,7 +93,7 @@ export default function MetricsView() {
             />
           }
         >
-          <StackedAreaChart />
+          <StackedAreaChart vaultName={filter} />
         </ChartCard>
       </>
     )

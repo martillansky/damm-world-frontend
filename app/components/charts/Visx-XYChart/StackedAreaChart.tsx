@@ -4,19 +4,23 @@ import { AreaSeries, AreaStack, Axis, Tooltip, XYChart } from "@visx/xychart";
 import React from "react";
 import { data, DataPoint } from "./MockData";
 
-export default function StackedAreaChart() {
+export default function StackedAreaChart({ vaultName }: { vaultName: string }) {
+  const filteredData =
+    vaultName === "all"
+      ? data
+      : data.filter((vaultData) => vaultData.vault === vaultName);
   return (
     <ParentSize>
       {({ width, height: parentHeight }) => (
         <XYChart
           width={width}
           height={parentHeight}
-          margin={{ top: 5, right: 0, bottom: 25, left: 15 }}
+          margin={{ top: 5, right: 35, bottom: 25, left: 0 }}
           xScale={{ type: "band" }}
           yScale={{ type: "linear" }}
         >
-          <AreaStack offset="expand" curve={curveCardinal} renderLine={true}>
-            {data.map((vaultData) => (
+          <AreaStack offset="diverging" curve={curveCardinal} renderLine={true}>
+            {filteredData.map((vaultData) => (
               <AreaSeries
                 key={vaultData.vault}
                 dataKey={vaultData.vault}
@@ -29,8 +33,8 @@ export default function StackedAreaChart() {
             ))}
           </AreaStack>
 
-          <Axis orientation="bottom" numTicks={5} />
-          <Axis label={"APY"} orientation={"left"} numTicks={5} />
+          <Axis key="x" orientation="bottom" numTicks={5} />
+          <Axis key="y" orientation={"right"} numTicks={5} />
           <Tooltip
             renderTooltip={({ tooltipData }) => {
               const datum = tooltipData?.nearestDatum?.datum as DataPoint;
