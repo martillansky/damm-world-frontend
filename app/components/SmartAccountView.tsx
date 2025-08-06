@@ -5,8 +5,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
-import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
-import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
+import { useSupply } from "@/lib/contracts/hooks/useSupply";
 import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
 import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
@@ -42,8 +41,7 @@ export default function SmartAccountView() {
     () => vault?.vaultData,
     [vault?.vaultData]
   );
-  const { submitRequestDepositOnSafe } = useDeposit();
-  const { submitRequestWithdraw } = useWithdraw();
+  const { submitSupplyOnSafe, withdrawSupplyFromSafe } = useSupply();
   const { theme } = useTheme();
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
@@ -63,11 +61,14 @@ export default function SmartAccountView() {
 
   const [selectedToken, setSelectedToken] =
     useState<string>(underlyingTokenSymb);
-  const { getBalanceOf, getNativeBalance, getUnderlyingBalanceOf } =
-    useBalanceOf();
+  const {
+    getSuppplyBalanceFromSafe,
+    getNativeBalance,
+    getUnderlyingBalanceOf,
+  } = useBalanceOf();
   const [walletBalance, setWalletBalance] = useState<string>("");
   const [walletNativeBalance, setWalletNativeBalance] = useState<string>("");
-  const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
+  const [supplyReadyToWithdraw, setSupplyReadyToWithdraw] =
     useState<string>("");
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -104,13 +105,13 @@ export default function SmartAccountView() {
       try {
         const wrapNativeToken =
           isUnderlyingWrapNative && selectedToken !== underlyingTokenSymb;
-        const tx = await submitRequestDepositOnSafe(amount, wrapNativeToken);
+        const tx = await submitSupplyOnSafe(amount, wrapNativeToken);
         setToastMessage("Supply request submitted!");
         setToastType("info");
         setShowToast(true);
 
         await tx.wait();
-        setToastMessage("Supply request confirmed!");
+        setToastMessage("Supply confirmed!");
         setToastType("success");
         setShowToast(true);
       } catch (error) {
@@ -121,13 +122,15 @@ export default function SmartAccountView() {
       }
     } else {
       try {
-        const tx = await submitRequestWithdraw(amount);
+        const unwrapNativeToken =
+          isUnderlyingWrapNative && selectedToken === underlyingTokenSymb;
+        const tx = await withdrawSupplyFromSafe(amount, unwrapNativeToken);
         setToastMessage("Withdraw request submitted!");
         setToastType("info");
         setShowToast(true);
 
         await tx.wait();
-        setToastMessage("Withdraw request confirmed!");
+        setToastMessage("Withdraw supply confirmed!");
         setToastType("success");
         setShowToast(true);
       } catch (error) {
@@ -149,7 +152,7 @@ export default function SmartAccountView() {
         ? selectedToken === underlyingTokenSymb
           ? walletBalance
           : walletNativeBalance
-        : sharesReadyToWithdraw
+        : supplyReadyToWithdraw
     );
   };
 
@@ -172,22 +175,22 @@ export default function SmartAccountView() {
   }, [getUnderlyingBalanceOf, address]);
 
   useEffect(() => {
-    const fetchSharesReadyToWithdraw = async () => {
+    const fetchSupplyReadyToWithdraw = async () => {
       try {
-        const balance = await getBalanceOf();
-        setSharesReadyToWithdraw(balance);
+        const balance = await getSuppplyBalanceFromSafe();
+        setSupplyReadyToWithdraw(balance);
       } catch (err) {
         console.warn("Failed to fetch balance:", err);
-        setSharesReadyToWithdraw("");
+        setSupplyReadyToWithdraw("");
       }
     };
 
     if (address) {
-      fetchSharesReadyToWithdraw();
+      fetchSupplyReadyToWithdraw();
     } else {
-      setSharesReadyToWithdraw("");
+      setSupplyReadyToWithdraw("");
     }
-  }, [getBalanceOf, address]);
+  }, [getSuppplyBalanceFromSafe, address]);
 
   useEffect(() => {
     let actions;
@@ -334,7 +337,7 @@ export default function SmartAccountView() {
                     ? selectedToken === underlyingTokenSymb
                       ? walletBalance + " " + underlyingTokenSymb
                       : walletNativeBalance + " " + underlyingNativeTokenSymb
-                    : sharesReadyToWithdraw + " " + underlyingTokenSymb}
+                    : supplyReadyToWithdraw + " " + underlyingTokenSymb}
                 </>
               }
               placeholder="0.0"

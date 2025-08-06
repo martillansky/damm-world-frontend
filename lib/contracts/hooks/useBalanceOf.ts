@@ -1,3 +1,4 @@
+import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { formatUnits } from "ethers/lib/utils";
 import { useAccount } from "wagmi";
@@ -6,6 +7,7 @@ import { getEthersProvider, getSignerAndContract } from "../utils/utils";
 export function useBalanceOf() {
   const { address } = useAccount();
   const network = useAppKitNetwork();
+  const { safeAddress } = useSafeLinkedAccountContext();
 
   const getUnderlyingTokenDecimals = async () => {
     const { tokenMetadata } = await getSignerAndContract(
@@ -53,10 +55,24 @@ export function useBalanceOf() {
     return formatUnits(balance, 18);
   };
 
+  const getSuppplyBalanceFromSafe = async () => {
+    if (!address || !safeAddress) throw new Error("No address found");
+
+    const { underlyingToken } = await getSignerAndContract(
+      network.chainId?.toString() ?? ""
+    );
+
+    // Supply available to withdraw from safe
+    const balance = await underlyingToken.balanceOf(safeAddress);
+
+    return formatUnits(balance, 18);
+  };
+
   return {
     getUnderlyingBalanceOf,
     getNativeBalance,
     getBalanceOf,
     getUnderlyingTokenDecimals,
+    getSuppplyBalanceFromSafe,
   };
 }

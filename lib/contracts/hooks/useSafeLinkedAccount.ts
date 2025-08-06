@@ -26,6 +26,7 @@ import { usePublicClient, useWalletClient } from "wagmi";
 import {
   getERC20ApproveTx,
   getERC20TransferFromTx,
+  getERC20TransferTx,
   isERC20Approved,
 } from "../utils/protocols/eip2612";
 import { getContractNetworks } from "../utils/protocols/gnosis";
@@ -237,9 +238,9 @@ export function useSafeLinkedAccount() {
     }
 
     // Safe with unique owner, no need to sign transaction
-    // const signedSafeTx: SafeTransaction = await safeSDK.signTransaction(safeTx);
+    const signedSafeTx: SafeTransaction = await safeSDK.signTransaction(safeTx);
     const deploymentBatch: Transaction =
-      await safeSDK.wrapSafeTransactionIntoDeploymentBatch(safeTx);
+      await safeSDK.wrapSafeTransactionIntoDeploymentBatch(signedSafeTx);
 
     const params = {
       to: deploymentBatch.to as `0x${string}`,
@@ -362,11 +363,52 @@ export function useSafeLinkedAccount() {
     return txResponse as unknown as TransactionResponse;
   };
 
+  const executeExitWorkflow = async (amount: string) => {
+    if (!safeSDK || !state.safeAddress || !client)
+      throw new Error("Safe not ready");
+    if (!address || !network.chainId) throw new Error("Failed connection");
+
+    const txs: SafeTransactionDataPartial[] = [];
+    const chainId = network.chainId.toString();
+    const { tokenMetadata, underlyingToken } = await getSignerAndContract(
+      chainId
+    );
+
+    const amountInWei = parseUnits(amount, tokenMetadata.decimals);
+
+    // Transfer amountInWei from safe to user
+    const transferFromTx = getERC20TransferTx({
+      to: address,
+      amount: amountInWei,
+      token: underlyingToken.address,
+    });
+    if (transferFromTx) txs.push(transferFromTx);
+
+    const safeTx: SafeTransaction = await safeSDK.createTransaction({
+      transactions: txs,
+      onlyCalls: true,
+    });
+
+    if (state.isDeployed) {
+      const txResponse = await safeSDK.executeTransaction(safeTx);
+      return {
+        hash: txResponse.hash,
+        wait: () =>
+          client.extend(publicActions).waitForTransactionReceipt({
+            hash: txResponse.hash as `0x${string}`,
+          }),
+      };
+    } else {
+      throw new Error("Safe not deployed, cannot execute exit workflow");
+    }
+  };
+
   return {
     ...state,
     executeSafeBatchWorkflow,
     executeFundSmartAccountWorkflow,
     executeDepositRequestWorkflow,
     deploySafeOnly,
+    executeExitWorkflow,
   };
 }

@@ -92,12 +92,10 @@ export function getERC20ApproveTx({
   token,
   spender,
   amount = MAX_UINT160,
-  expiration = DEFAULT_EXPIRATION,
 }: {
   token: Address;
   spender: Address; // safe address
   amount?: bigint; // optional; defaults to MAX_UINT160
-  expiration?: number; // optional; defaults to 100 years
 }): {
   to: Address;
   data: `0x${string}`;
@@ -109,7 +107,7 @@ export function getERC20ApproveTx({
     data: encodeFunctionData({
       abi: ERC20Abi,
       functionName: "approve",
-      args: [token, spender, amount, expiration],
+      args: [spender, amount],
     }),
   };
 }
@@ -213,7 +211,31 @@ export function getERC20TransferFromTx({
     data: encodeFunctionData({
       abi: ERC20Abi,
       functionName: "transferFrom",
-      args: [from, to, amount, token],
+      args: [from, to, amount],
+    }),
+  };
+}
+
+export function getERC20TransferTx({
+  to,
+  amount,
+  token,
+}: {
+  to: Address; // receiver (Safe)
+  amount: bigint;
+  token: Address;
+}): {
+  to: Address;
+  data: `0x${string}`;
+  value: "0";
+} {
+  return {
+    to: token,
+    value: "0",
+    data: encodeFunctionData({
+      abi: ERC20Abi,
+      functionName: "transfer",
+      args: [to, amount],
     }),
   };
 }
@@ -233,17 +255,18 @@ export async function isERC20Approved({
     address: token,
     abi: ERC20Abi,
     functionName: "allowance",
-    args: [owner, token, spender],
-  })) as [bigint, bigint, bigint];
+    args: [owner, spender],
+  })) as bigint;
 
   const requiredAmount = BigNumber.from(MAX_UINT160);
-  const isApproved = BigNumber.from(allowance[0]).gte(requiredAmount);
+  const isApproved = BigNumber.from(allowance).gte(requiredAmount);
 
-  const expiration = allowance[1];
+  return isApproved;
+  /* const expiration = allowance[1];
   const now = BigInt(Math.floor(Date.now() / 1000)); // current time in seconds as BigInt
   const isExpired = expiration < now;
 
-  return isApproved && !isExpired;
+  return isApproved && !isExpired; */
 }
 
 export async function isERC20Permited({
