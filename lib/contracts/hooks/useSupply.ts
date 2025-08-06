@@ -13,7 +13,16 @@ export function useSupply() {
     error,
     executeFundSmartAccountWorkflow,
     executeExitWorkflow,
+    deploySafeAsSpender,
   } = useSafeLinkedAccountContext();
+
+  const createAccount = async () => {
+    if (!address) throw new Error("No address found");
+    if (!safeAddress || isLoading || error) throw new Error("Safe not linked");
+
+    const tx = await deploySafeAsSpender();
+    return tx as unknown as TransactionResponse;
+  };
 
   const submitSupplyOnSafe = async (
     amount: string,
@@ -51,5 +60,6 @@ export function useSupply() {
   return {
     submitSupplyOnSafe,
     withdrawSupplyFromSafe,
+    createAccount,
   };
 }

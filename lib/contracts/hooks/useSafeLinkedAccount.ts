@@ -8,9 +8,7 @@ import Safe, {
 import {
   SafeTransaction,
   SafeTransactionDataPartial,
-  Transaction,
 } from "@safe-global/types-kit";
-import { BigNumber } from "ethers";
 import { formatUnits } from "ethers/lib/utils";
 import { useEffect, useState } from "react";
 import {
@@ -30,7 +28,6 @@ import {
   isERC20Approved,
 } from "../utils/protocols/eip2612";
 import { getContractNetworks } from "../utils/protocols/gnosis";
-import { getApproveTx } from "../utils/TokenUtils";
 import {
   getDeterministicSaltNonce,
   getEthersProvider,
@@ -188,83 +185,6 @@ export function useSafeLinkedAccount() {
     if (address && network.chainId && walletClient) initializeSafe();
   }, [address, network.chainId, walletClient]);
 
-  const executeSafeBatchWorkflow = async (
-    txs: SafeTransactionDataPartial[]
-  ) => {
-    if (!safeSDK || !state.safeAddress || !client)
-      throw new Error("Safe not ready");
-    if (!address || !network.chainId) throw new Error("Failed connection");
-
-    const signer = getEthersProvider().getSigner();
-
-    if (!state.isDeployed) {
-      const chainId = network.chainId.toString();
-      const { underlyingToken } = await getSignerAndContract(chainId);
-
-      // Allows to update user's allowance on token contract to transfer tokens from user to safe
-      const isERC20ApprovalRequired = !(await isERC20Approved({
-        token: underlyingToken.address,
-        owner: address,
-        spender: state.safeAddress,
-        publicClient: publicClient!,
-      }));
-
-      if (isERC20ApprovalRequired) {
-        const erc20ApproveTx = getERC20ApproveTx({
-          token: underlyingToken.address,
-          spender: state.safeAddress,
-        });
-        if (!erc20ApproveTx) throw new Error("ERC20 approve tx not found");
-
-        const txResponse = await signer.sendTransaction(erc20ApproveTx);
-        await txResponse.wait();
-      }
-    }
-
-    const safeTx: SafeTransaction = await safeSDK.createTransaction({
-      transactions: txs,
-      onlyCalls: true,
-    });
-
-    if (state.isDeployed) {
-      const txResponse = await safeSDK.executeTransaction(safeTx);
-      return {
-        hash: txResponse.hash,
-        wait: () =>
-          client.extend(publicActions).waitForTransactionReceipt({
-            hash: txResponse.hash as `0x${string}`,
-          }),
-      };
-    }
-
-    // Safe with unique owner, no need to sign transaction
-    const signedSafeTx: SafeTransaction = await safeSDK.signTransaction(safeTx);
-    const deploymentBatch: Transaction =
-      await safeSDK.wrapSafeTransactionIntoDeploymentBatch(signedSafeTx);
-
-    const params = {
-      to: deploymentBatch.to as `0x${string}`,
-      value: BigInt(deploymentBatch.value),
-      data: deploymentBatch.data as `0x${string}`,
-      chain: client.chain as Chain,
-      account: address as `0x${string}`,
-    };
-
-    const request = await client.prepareTransactionRequest(params);
-    const txHash = await client.sendTransaction({
-      account: address as `0x${string}`,
-      ...request,
-    });
-
-    return {
-      hash: txHash,
-      wait: () =>
-        client
-          .extend(publicActions)
-          .waitForTransactionReceipt({ hash: txHash }),
-    };
-  };
-
   const executeFundSmartAccountWorkflow = async (amount: string) => {
     if (!safeSDK || !state.safeAddress || !client)
       throw new Error("Safe not ready");
@@ -287,47 +207,19 @@ export function useSafeLinkedAccount() {
     });
     if (transferFromTx) txs.push(transferFromTx);
 
-    //const txResponse = await deploySafeOnly();
-    const txResponse = await executeSafeBatchWorkflow(txs);
-    return txResponse as unknown as TransactionResponse;
+    try {
+      const txResponse = await executeSafeTransaction(txs);
+      return txResponse as unknown as TransactionResponse;
+    } catch (error) {
+      console.error("Error executing safe transaction:", error);
+      throw new Error("Cannot execute fund smart account workflow");
+    }
   };
 
-  const executeDepositRequestWorkflow = async (amount: string) => {
+  const executeSafeTransaction = async (txs: SafeTransactionDataPartial[]) => {
     if (!safeSDK || !state.safeAddress || !client)
       throw new Error("Safe not ready");
     if (!address || !network.chainId) throw new Error("Failed connection");
-
-    const txs: SafeTransactionDataPartial[] = [];
-    const chainId = network.chainId.toString();
-    const { vault, tokenMetadata } = await getSignerAndContract(chainId);
-
-    const amountInWei = parseUnits(amount, tokenMetadata.decimals);
-
-    // Approve tokens to be transferred from safe to the vault
-    const approveTx = await getApproveTx(
-      chainId,
-      state.safeAddress,
-      vault.address,
-      BigNumber.from(amountInWei)
-    );
-    if (approveTx) {
-      txs.push({
-        to: approveTx.target,
-        value: "0",
-        data: approveTx.callData,
-      });
-    }
-
-    // Request deposit
-    const requestDepositCall = {
-      to: vault.address,
-      value: "0",
-      data: vault.interface.encodeFunctionData(
-        "requestDeposit(uint256,address,address,address)",
-        [amountInWei, state.safeAddress, state.safeAddress, state.safeAddress]
-      ),
-    };
-    txs.push(requestDepositCall);
 
     const safeTx: SafeTransaction = await safeSDK.createTransaction({
       transactions: txs,
@@ -344,23 +236,62 @@ export function useSafeLinkedAccount() {
           }),
       };
     } else {
-      throw new Error("Safe not deployed, cannot execute deposit request");
+      throw new Error("Cannot execute safe transaction");
     }
   };
 
-  const deploySafeOnly = async () => {
+  const executeApproveSafeSpender = async () => {
+    if (!safeSDK || !state.safeAddress || !client)
+      throw new Error("Safe not ready");
+    if (!address || !network.chainId) throw new Error("Failed connection");
+
+    const signer = getEthersProvider().getSigner();
+
+    const chainId = network.chainId.toString();
+    const { underlyingToken } = await getSignerAndContract(chainId);
+
+    // Allows to update user's allowance on token contract to transfer tokens from user to safe
+    const isERC20ApprovalRequired = !(await isERC20Approved({
+      token: underlyingToken.address,
+      owner: address,
+      spender: state.safeAddress,
+      publicClient: publicClient!,
+    }));
+
+    if (isERC20ApprovalRequired) {
+      const erc20ApproveTx = getERC20ApproveTx({
+        token: underlyingToken.address,
+        spender: state.safeAddress,
+      });
+      if (!erc20ApproveTx) throw new Error("ERC20 approve tx not found");
+
+      const txResponse = await signer.sendTransaction(erc20ApproveTx);
+      await txResponse.wait();
+    }
+  };
+
+  const deploySafeAsSpender = async () => {
     if (!safeSDK || !client) throw new Error("Safe not ready");
     if (!address || !chain) throw new Error("Failed connection");
 
+    await executeApproveSafeSpender();
+
     const tx = await safeSDK.createSafeDeploymentTransaction();
-    const txResponse = await client.sendTransaction({
+    const txHash = await client.sendTransaction({
       account: address as `0x${string}`,
       to: tx.to as `0x${string}`,
       value: BigInt(tx.value),
       data: tx.data as `0x${string}`,
       chain,
     });
-    return txResponse as unknown as TransactionResponse;
+    setState((s) => ({ ...s, isDeployed: true }));
+    return {
+      hash: txHash,
+      wait: () =>
+        client
+          .extend(publicActions)
+          .waitForTransactionReceipt({ hash: txHash }),
+    };
   };
 
   const executeExitWorkflow = async (amount: string) => {
@@ -384,31 +315,20 @@ export function useSafeLinkedAccount() {
     });
     if (transferFromTx) txs.push(transferFromTx);
 
-    const safeTx: SafeTransaction = await safeSDK.createTransaction({
-      transactions: txs,
-      onlyCalls: true,
-    });
-
-    if (state.isDeployed) {
-      const txResponse = await safeSDK.executeTransaction(safeTx);
-      return {
-        hash: txResponse.hash,
-        wait: () =>
-          client.extend(publicActions).waitForTransactionReceipt({
-            hash: txResponse.hash as `0x${string}`,
-          }),
-      };
-    } else {
+    try {
+      const txResponse = await executeSafeTransaction(txs);
+      return txResponse as unknown as TransactionResponse;
+    } catch (error) {
+      console.error("Error executing safe transaction:", error);
       throw new Error("Safe not deployed, cannot execute exit workflow");
     }
   };
 
   return {
     ...state,
-    executeSafeBatchWorkflow,
     executeFundSmartAccountWorkflow,
-    executeDepositRequestWorkflow,
-    deploySafeOnly,
+    deploySafeAsSpender,
+    executeSafeTransaction,
     executeExitWorkflow,
   };
 }

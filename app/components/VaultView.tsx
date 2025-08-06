@@ -1,5 +1,6 @@
 import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
+import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
@@ -22,12 +23,12 @@ import Dialog, {
 import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
-import Select from "./ui/common/Select";
 import Toast, { ToastType } from "./ui/common/Toast";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function VaultView() {
+  const { safeAddress } = useSafeLinkedAccountContext();
   const { address } = useParams();
   const network = useAppKitNetwork();
   const { vault, isLoading } = useVault();
@@ -37,7 +38,7 @@ export default function VaultView() {
     () => vault?.vaultData,
     [vault?.vaultData]
   );
-  const { submitRequestDepositOnSafe } = useDeposit();
+  const { submitRequestDeposit } = useDeposit();
   const { submitRequestWithdraw } = useWithdraw();
 
   const { setActions } = useActionSlot();
@@ -49,18 +50,14 @@ export default function VaultView() {
   const [amount, setAmount] = useState("");
 
   const {
-    IS_UNDERLYING_WRAP_NATIVE: isUnderlyingWrapNative,
-    UNDERLYING_NATIVE_TOKEN_SYMB: underlyingNativeTokenSymb,
     UNDERLYING_TOKEN_SYMB: underlyingTokenSymb,
     SHARE_TOKEN_SYMB: shareTokenSymb,
   } = getEnvVars(getTypedChainId(Number(network.chainId)));
 
-  const [selectedToken, setSelectedToken] =
-    useState<string>(underlyingTokenSymb);
-  const { getBalanceOf, getNativeBalance, getUnderlyingBalanceOf } =
+  const { getBalanceOf, getSuppplyBalanceFromSafe, getBalanceFromSafe } =
     useBalanceOf();
   const [walletBalance, setWalletBalance] = useState<string>("");
-  const [walletNativeBalance, setWalletNativeBalance] = useState<string>("");
+
   const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
     useState<string>("");
   const [showToast, setShowToast] = useState(false);
@@ -68,24 +65,10 @@ export default function VaultView() {
   const [toastType, setToastType] = useState<ToastType>("info");
 
   useEffect(() => {
-    const retrieveNativeBalance = async () => {
-      const nativeBalance = await getNativeBalance();
-      setWalletNativeBalance(nativeBalance);
-    };
-
     if (!isLoading && vaultData) {
       setViewLoaded();
-      if (isUnderlyingWrapNative) {
-        retrieveNativeBalance();
-      }
     }
-  }, [
-    isLoading,
-    vaultData,
-    setViewLoaded,
-    isUnderlyingWrapNative,
-    getNativeBalance,
-  ]);
+  }, [isLoading, vaultData, setViewLoaded]);
 
   const handleOperation = (op: VaultActionKey) => {
     setOperation(op);
@@ -96,9 +79,7 @@ export default function VaultView() {
     setShowDialog(false);
     if (operation === "DEPOSIT") {
       try {
-        const wrapNativeToken =
-          isUnderlyingWrapNative && selectedToken !== underlyingTokenSymb;
-        const tx = await submitRequestDepositOnSafe(amount, wrapNativeToken);
+        const tx = await submitRequestDeposit(amount);
         setToastMessage("Deposit request submitted!");
         setToastType("info");
         setShowToast(true);
@@ -134,23 +115,17 @@ export default function VaultView() {
     setAmount("");
     setOperation(null);
     // Invalidate and refetch vault data
-    queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
+    queryClient.invalidateQueries({ queryKey: ["vaultData", safeAddress] });
   };
 
   const handleMaxClick = () => {
-    setAmount(
-      operation === "DEPOSIT"
-        ? selectedToken === underlyingTokenSymb
-          ? walletBalance
-          : walletNativeBalance
-        : sharesReadyToWithdraw
-    );
+    setAmount(operation === "DEPOSIT" ? walletBalance : sharesReadyToWithdraw);
   };
 
   useEffect(() => {
     const fetchUnderlyingBalance = async () => {
       try {
-        const balance = await getUnderlyingBalanceOf();
+        const balance = await getSuppplyBalanceFromSafe();
         setWalletBalance(balance);
       } catch (err) {
         console.warn("Failed to fetch balance:", err);
@@ -163,12 +138,12 @@ export default function VaultView() {
     } else {
       setWalletBalance("");
     }
-  }, [getUnderlyingBalanceOf, address]);
+  }, [getSuppplyBalanceFromSafe, address]);
 
   useEffect(() => {
     const fetchSharesReadyToWithdraw = async () => {
       try {
-        const balance = await getBalanceOf();
+        const balance = await getBalanceFromSafe();
         setSharesReadyToWithdraw(balance);
       } catch (err) {
         console.warn("Failed to fetch balance:", err);
@@ -257,21 +232,9 @@ export default function VaultView() {
           }
         >
           <DialogContents>
-            {operation === "DEPOSIT" &&
-              !!isUnderlyingWrapNative &&
-              isUnderlyingWrapNative && (
-                <Select
-                  label="Token"
-                  options={[underlyingTokenSymb, underlyingNativeTokenSymb]}
-                  value={selectedToken}
-                  onChange={(e) => setSelectedToken(e.target.value)}
-                />
-              )}
             <Input
               type="number"
-              label={`Amount (${
-                operation === "DEPOSIT" ? selectedToken : underlyingTokenSymb
-              })`}
+              label={`Amount (${underlyingTokenSymb})`}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               handleMaxClick={handleMaxClick}
@@ -279,9 +242,7 @@ export default function VaultView() {
                 <>
                   Max:{" "}
                   {operation === "DEPOSIT"
-                    ? selectedToken === underlyingTokenSymb
-                      ? walletBalance + " " + underlyingTokenSymb
-                      : walletNativeBalance + " " + underlyingNativeTokenSymb
+                    ? walletBalance + " " + underlyingTokenSymb
                     : sharesReadyToWithdraw + " " + underlyingTokenSymb}
                 </>
               }

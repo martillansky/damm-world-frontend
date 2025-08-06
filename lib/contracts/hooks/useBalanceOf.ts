@@ -42,6 +42,25 @@ export function useBalanceOf() {
     return formatUnits(balance, tokenMetadata.decimals);
   };
 
+  /* const getUnderlyingBalanceFromSafe = async () => {
+    console.log("network: ", network);
+    if (!safeAddress) throw new Error("No address found");
+
+    const { underlyingToken, tokenMetadata } = await getSignerAndContract(
+      network.chainId?.toString() ?? ""
+    );
+
+    console.log("underlyingToken: ", underlyingToken.address);
+    console.log("NATIVE: ", await getNativeBalance());
+
+    // These are the underlying tokens user has on his wallet
+    const balance = await underlyingToken.balanceOf(safeAddress);
+
+    console.log("balance: ", balance);
+
+    return formatUnits(balance, tokenMetadata.decimals);
+  }; */
+
   const getBalanceOf = async () => {
     if (!address) throw new Error("No address found");
 
@@ -51,6 +70,19 @@ export function useBalanceOf() {
 
     // These are the shares ready to be withdrawn (user holds them on his wallet)
     const balance = await vault.balanceOf(address);
+
+    return formatUnits(balance, 18);
+  };
+
+  const getBalanceFromSafe = async () => {
+    if (!safeAddress) throw new Error("No address found");
+
+    const { vault } = await getSignerAndContract(
+      network.chainId?.toString() ?? ""
+    );
+
+    // These are the shares ready to be withdrawn
+    const balance = await vault.balanceOf(safeAddress);
 
     return formatUnits(balance, 18);
   };
@@ -74,5 +106,6 @@ export function useBalanceOf() {
     getBalanceOf,
     getUnderlyingTokenDecimals,
     getSuppplyBalanceFromSafe,
+    getBalanceFromSafe,
   };
 }

@@ -1,20 +1,17 @@
 import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 import { TransactionResponse } from "@ethersproject/providers";
 import { useAppKitNetwork } from "@reown/appkit/react";
+import { SafeTransactionDataPartial } from "@safe-global/types-kit";
+import { BigNumber } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { useAccount } from "wagmi";
-import { batchTxs, Call, MULTICALL3_ADDRESS } from "../utils/BatchTxs";
-import {
-  getApproveTx,
-  handleApprove,
-  wrapNativeETH,
-} from "../utils/TokenUtils";
+import { getApproveTx } from "../utils/TokenUtils";
 import { getSignerAndContract } from "../utils/utils";
 
 export function useDeposit() {
   const { address } = useAccount();
   const network = useAppKitNetwork();
-  const { safeAddress, isLoading, error, executeDepositRequestWorkflow } =
+  const { safeAddress, isLoading, error, executeSafeTransaction } =
     useSafeLinkedAccountContext();
 
   const cancelDepositRequest = async () => {
@@ -23,127 +20,71 @@ export function useDeposit() {
     const chainId = network.chainId?.toString() ?? "";
     const { vault } = await getSignerAndContract(chainId);
 
-    const tx = await vault.cancelRequestDeposit();
-    return tx as unknown as TransactionResponse;
-  };
+    const txs: SafeTransactionDataPartial[] = [];
 
-  const submitRequestDeposit = async (
-    amount: string,
-    wrapNativeToken: boolean
-  ) => {
-    if (!address) throw new Error("No address found");
-
-    const chainId = network.chainId?.toString() ?? "";
-    const { vault, tokenMetadata } = await getSignerAndContract(chainId);
-
-    if (wrapNativeToken) {
-      await wrapNativeETH(chainId, amount);
-    }
-
-    const amountInWei = parseUnits(amount, tokenMetadata.decimals);
-    await handleApprove(chainId, address, vault.address, amountInWei);
-    const tx = await vault["requestDeposit(uint256,address,address,address)"](
-      amountInWei,
-      address,
-      address,
-      address
-    );
-    return tx as unknown as TransactionResponse;
-  };
-
-  const submitRequestDepositOnMulticall = async (
-    amount: string,
-    wrapNativeToken: boolean
-  ) => {
-    if (!address) throw new Error("No address found");
-
-    const chainId = network.chainId?.toString() ?? "";
-    const { vault, tokenMetadata } = await getSignerAndContract(chainId);
-
-    if (wrapNativeToken) {
-      await wrapNativeETH(chainId, amount);
-    }
-
-    const amountInWei = parseUnits(amount, tokenMetadata.decimals);
-    const calls: Call[] = [];
-
-    const setOperatorTx = await vault.setOperator(MULTICALL3_ADDRESS, true);
-    await setOperatorTx.wait();
-    console.log("setOperatorTx", setOperatorTx);
-
-    /* const setOperatorCall = {
-      target: vault.address,
-      allowFailure: false,
-      callData: vault.interface.encodeFunctionData("setOperator", [
-        MULTICALL3_ADDRESS,
-        true,
-      ]),
+    const cancelDepositRequestCall = {
+      to: vault.address,
+      value: "0",
+      data: vault.interface.encodeFunctionData("cancelRequestDeposit"),
     };
-    calls.push(setOperatorCall); */
-
-    const approveTx = await getApproveTx(
-      chainId,
-      address,
-      vault.address,
-      amountInWei
-    );
-    if (approveTx) {
-      calls.push(approveTx);
-    }
-    const requestDepositCall = {
-      target: vault.address,
-      allowFailure: false,
-      callData: vault.interface.encodeFunctionData(
-        "requestDeposit(uint256,address,address,address)",
-        [amountInWei, address, address, address]
-      ),
-    };
-    calls.push(requestDepositCall);
-
-    /* const revokeOperatorCall = {
-      target: vault.address,
-      allowFailure: true,
-      callData: vault.interface.encodeFunctionData("setOperator", [
-        MULTICALL3_ADDRESS,
-        false,
-      ]),
-    };
-    calls.push(revokeOperatorCall); */
+    txs.push(cancelDepositRequestCall);
 
     try {
-      // Pass ETH value if wrapping native token
-      const value = wrapNativeToken ? amountInWei.toString() : undefined;
-      const tx = await batchTxs(chainId, calls, value);
-      return tx as unknown as TransactionResponse;
+      const txResponse = await executeSafeTransaction(txs);
+      return txResponse as unknown as TransactionResponse;
     } catch (error) {
-      console.warn(
-        "Batch transaction failed, falling back to sequential:",
-        error
-      );
-      return await submitRequestDeposit(amount, wrapNativeToken);
+      console.error("Error executing safe transaction:", error);
+      throw new Error("Cannot execute cancel deposit request");
     }
   };
 
-  const submitRequestDepositOnSafe = async (
-    amount: string,
-    wrapNativeToken: boolean
-  ) => {
-    if (!address) throw new Error("No address found");
+  const submitRequestDeposit = async (amount: string) => {
+    if (!address || !network.chainId) throw new Error("Failed connection");
     if (!safeAddress || isLoading || error) throw new Error("Safe not linked");
 
-    if (wrapNativeToken) {
-      // Wrap native token to WETH: must be triggered by user
-      await wrapNativeETH(network.chainId!.toString(), amount);
+    const txs: SafeTransactionDataPartial[] = [];
+    const chainId = network.chainId.toString();
+    const { vault, tokenMetadata } = await getSignerAndContract(chainId);
+
+    const amountInWei = parseUnits(amount, tokenMetadata.decimals);
+
+    // Approve tokens to be transferred from safe to the vault
+    const approveTx = await getApproveTx(
+      chainId,
+      safeAddress,
+      vault.address,
+      BigNumber.from(amountInWei)
+    );
+    if (approveTx) {
+      txs.push({
+        to: approveTx.target,
+        value: "0",
+        data: approveTx.callData,
+      });
     }
 
-    const tx = await executeDepositRequestWorkflow(amount);
-    return tx as unknown as TransactionResponse;
+    // Request deposit
+    const requestDepositCall = {
+      to: vault.address,
+      value: "0",
+      data: vault.interface.encodeFunctionData(
+        "requestDeposit(uint256,address,address,address)",
+        [amountInWei, safeAddress, safeAddress, safeAddress]
+      ),
+    };
+    txs.push(requestDepositCall);
+
+    try {
+      const txResponse = await executeSafeTransaction(txs);
+      return txResponse as unknown as TransactionResponse;
+    } catch (error) {
+      console.error("Error executing safe transaction:", error);
+      throw new Error("Cannot execute deposit request");
+    }
   };
 
   return {
     submitRequestDeposit,
-    submitRequestDepositOnMulticall,
-    submitRequestDepositOnSafe,
     cancelDepositRequest,
   };
 }

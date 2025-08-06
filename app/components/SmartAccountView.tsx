@@ -41,12 +41,13 @@ export default function SmartAccountView() {
     () => vault?.vaultData,
     [vault?.vaultData]
   );
-  const { submitSupplyOnSafe, withdrawSupplyFromSafe } = useSupply();
+  const { submitSupplyOnSafe, withdrawSupplyFromSafe, createAccount } =
+    useSupply();
   const { theme } = useTheme();
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
 
-  type SmartAccountActionKey = BaseActionKey & ("SUPPLY" | "EXIT");
+  type SmartAccountActionKey = BaseActionKey & ("SUPPLY" | "EXIT" | "CREATE");
   const [operation, setOperation] = useState<SmartAccountActionKey | null>(
     null
   );
@@ -120,7 +121,7 @@ export default function SmartAccountView() {
         setToastType("error");
         setShowToast(true);
       }
-    } else {
+    } else if (operation === "EXIT") {
       try {
         const unwrapNativeToken =
           isUnderlyingWrapNative && selectedToken === underlyingTokenSymb;
@@ -136,6 +137,23 @@ export default function SmartAccountView() {
       } catch (error) {
         console.error("Error in withdraw process:", error);
         setToastMessage("Error submitting withdraw request");
+        setToastType("error");
+        setShowToast(true);
+      }
+    } else if (operation === "CREATE") {
+      try {
+        const tx = await createAccount();
+        setToastMessage("Account creation requested!");
+        setToastType("info");
+        setShowToast(true);
+
+        await tx.wait();
+        setToastMessage("DAMM account created!");
+        setToastType("success");
+        setShowToast(true);
+      } catch (error) {
+        console.error("Error in create account process:", error);
+        setToastMessage("Error creating account");
         setToastType("error");
         setShowToast(true);
       }
@@ -208,11 +226,11 @@ export default function SmartAccountView() {
         },
       });
     } else {
-      actions = createActions(["SUPPLY"], {
-        SUPPLY: {
-          label: "Initial Supply",
+      actions = createActions(["CREATE"], {
+        CREATE: {
+          label: "Create Account",
           icon: <ArrowUpIcon />,
-          onClick: () => handleOperation("SUPPLY"),
+          onClick: () => handleOperation("CREATE"),
         },
       });
     }
@@ -308,7 +326,9 @@ export default function SmartAccountView() {
           title={
             operation === "SUPPLY"
               ? `Supply ${underlyingTokenSymb}`
-              : `Withdraw ${underlyingTokenSymb}`
+              : operation === "EXIT"
+              ? `Withdraw ${underlyingTokenSymb}`
+              : `Create DAMM Account`
           }
         >
           <DialogContents>
@@ -322,27 +342,28 @@ export default function SmartAccountView() {
                   onChange={(e) => setSelectedToken(e.target.value)}
                 />
               )}
-            <Input
-              type="number"
-              label={`Amount (${
-                operation === "SUPPLY" ? selectedToken : underlyingTokenSymb
-              })`}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              handleMaxClick={handleMaxClick}
-              labelMax={
-                <>
-                  Max:{" "}
-                  {operation === "SUPPLY"
-                    ? selectedToken === underlyingTokenSymb
-                      ? walletBalance + " " + underlyingTokenSymb
-                      : walletNativeBalance + " " + underlyingNativeTokenSymb
-                    : supplyReadyToWithdraw + " " + underlyingTokenSymb}
-                </>
-              }
-              placeholder="0.0"
-            />
-
+            {operation !== "CREATE" && (
+              <Input
+                type="number"
+                label={`Amount (${
+                  operation === "SUPPLY" ? selectedToken : underlyingTokenSymb
+                })`}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                handleMaxClick={handleMaxClick}
+                labelMax={
+                  <>
+                    Max:{" "}
+                    {operation === "SUPPLY"
+                      ? selectedToken === underlyingTokenSymb
+                        ? walletBalance + " " + underlyingTokenSymb
+                        : walletNativeBalance + " " + underlyingNativeTokenSymb
+                      : supplyReadyToWithdraw + " " + underlyingTokenSymb}
+                  </>
+                }
+                placeholder="0.0"
+              />
+            )}
             {operation === "SUPPLY" && (
               <>
                 {!isDeployed && (
@@ -382,6 +403,28 @@ export default function SmartAccountView() {
                 </WarningCard>
               </>
             )}
+            {operation === "CREATE" && (
+              <>
+                <ObservationCard title="Create Account">
+                  This is a two-step process which requires:
+                  <br />
+                  1. Your signature for approving the creation of your private
+                  DAMM account.
+                  <br />
+                  2. To trigger the transaction to create your private DAMM
+                  account.
+                </ObservationCard>
+
+                <WarningCard title="Disclaimer">
+                  You will be able to:
+                  <br />- Supply {underlyingTokenSymb} tokens to your DAMM
+                  account.
+                  <br />- Deposit and manage position in our vaults.
+                  <br />- Exit at anytime, receiving back the assets to your
+                  wallet.
+                </WarningCard>
+              </>
+            )}
           </DialogContents>
 
           <DialogActionButtons>
@@ -389,7 +432,11 @@ export default function SmartAccountView() {
               Cancel
             </Button>
             <Button onClick={handleSubmit}>
-              {operation === "SUPPLY" ? "Supply" : "Exit"}
+              {operation === "SUPPLY"
+                ? "Supply"
+                : operation === "EXIT"
+                ? "Exit"
+                : "Create"}
             </Button>
           </DialogActionButtons>
         </Dialog>

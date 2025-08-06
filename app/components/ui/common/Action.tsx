@@ -4,6 +4,7 @@ export type BaseActionKey =
   | "ZOOM IN"
   | "ZOOM OUT"
   | "SUPPLY"
+  | "CREATE"
   | "WITHDRAW"
   | "REDEEM"
   | "EXIT"
