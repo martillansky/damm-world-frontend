@@ -31,7 +31,6 @@ export function VaultProvider({ children }: VaultProviderProps) {
 
   const [vault, setVault] = useState<DataPresenter | null>(null);
   const { data, isLoading } = useVaultData(safeAddress ?? "");
-  //const { data, isLoading } = useVaultData(address ?? "");
 
   useEffect(() => {
     if (isLoading || !address) {

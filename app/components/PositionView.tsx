@@ -5,8 +5,9 @@ import { PositionDataView } from "@/lib/data/types/DataPresenter.types";
 import { useEffect, useMemo, useState } from "react";
 /* import ArrowDownIcon from "./icons/ArrowDownIcon";
 import ArrowRightIcon from "./icons/ArrowRightIcon"; */
+import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
+import { useTransaction } from "@/context/TransactionContext";
 import { useQueryClient } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
 import RedeemIcon from "./icons/RedeemIcon";
 import { BaseActionKey, createActions } from "./ui/common/Action";
 import Button from "./ui/common/Button";
@@ -17,12 +18,11 @@ import Dialog, {
 } from "./ui/common/Dialog";
 import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
-import Toast, { ToastType } from "./ui/common/Toast";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function PositionView() {
-  const { address } = useParams();
+  const { safeAddress } = useSafeLinkedAccountContext();
   const { vault, isLoading } = useVault();
   const queryClient = useQueryClient();
   const { isChangingView, setViewLoaded } = useView();
@@ -31,10 +31,8 @@ export default function PositionView() {
     [vault?.positionData]
   );
   const { submitRedeem } = useWithdraw();
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState<ToastType>("info");
-
+  const { showTransaction, updateTransactionStatus, hideTransaction } =
+    useTransaction();
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
   type PositionActionKey = BaseActionKey & ("REDEEM" | "CLAIM" | "SEND");
@@ -58,26 +56,45 @@ export default function PositionView() {
     setShowDialog(false);
     if (operation === "REDEEM") {
       try {
-        const tx = await submitRedeem(amount);
-        setToastMessage("Redeem request submitted!");
-        setToastType("info");
-        setShowToast(true);
+        // Show the overlay
+        showTransaction(
+          "Processing Redeem",
+          "Please wait while we process your redeem request..."
+        );
 
+        // Execute transaction
+        const tx = await submitRedeem(amount);
+
+        // Update status to pending
+        updateTransactionStatus(
+          "pending",
+          "Transaction submitted! Waiting for confirmation..."
+        );
+
+        // Wait for confirmation
         await tx.wait();
-        setToastMessage("Redeem request confirmed!");
-        setToastType("success");
-        setShowToast(true);
+
+        // Update to success
+        updateTransactionStatus("success", "Redeem request confirmed!");
+
+        // Hide after 2 seconds
+        setTimeout(hideTransaction, 2000);
       } catch (error) {
         console.error("Error in redeem process:", error);
-        setToastMessage("Error submitting redeem request");
-        setToastType("error");
-        setShowToast(true);
+        // Update to error
+        updateTransactionStatus(
+          "error",
+          "Transaction failed. Please try again."
+        );
+
+        // Hide after 3 seconds
+        setTimeout(hideTransaction, 3000);
       }
     }
     setAmount("");
     setOperation(null);
     // Invalidate and refetch vault data
-    queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
+    queryClient.invalidateQueries({ queryKey: ["vaultData", safeAddress] });
   };
 
   const handleMaxClick = () => {
@@ -227,15 +244,6 @@ export default function PositionView() {
             </Button>
           </DialogActionButtons>
         </Dialog>
-
-        {/* Toast */}
-        <Toast
-          show={showToast}
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-          duration={5000}
-        />
       </>
     )
   );

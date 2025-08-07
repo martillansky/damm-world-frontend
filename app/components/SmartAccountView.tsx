@@ -2,6 +2,7 @@ import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
 import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useTransaction } from "@/context/TransactionContext";
 import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
@@ -44,6 +45,9 @@ export default function SmartAccountView() {
   const { submitSupplyOnSafe, withdrawSupplyFromSafe, createAccount } =
     useSupply();
   const { theme } = useTheme();
+  const { showTransaction, updateTransactionStatus, hideTransaction } =
+    useTransaction();
+
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
 
@@ -74,6 +78,11 @@ export default function SmartAccountView() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<ToastType>("info");
+  const safeAddressShort =
+    safeAddress?.slice(0, 6) + "..." + safeAddress?.slice(-4);
+  const explorerLink = `${
+    getEnvVars(getTypedChainId(Number(network.chainId))).BLOCK_EXPLORER_GATEWAY
+  }/address/${safeAddress}`;
 
   useEffect(() => {
     const retrieveNativeBalance = async () => {
@@ -106,62 +115,128 @@ export default function SmartAccountView() {
       try {
         const wrapNativeToken =
           isUnderlyingWrapNative && selectedToken !== underlyingTokenSymb;
-        const tx = await submitSupplyOnSafe(amount, wrapNativeToken);
-        setToastMessage("Supply request submitted!");
-        setToastType("info");
-        setShowToast(true);
+        // Show the overlay
+        showTransaction(
+          "Processing Supply",
+          "Please wait while we process your supply request..."
+        );
 
+        // Execute transaction
+        const tx = await submitSupplyOnSafe(amount, wrapNativeToken);
+
+        // Update status to pending
+        updateTransactionStatus(
+          "pending",
+          "Transaction submitted! Waiting for confirmation..."
+        );
+
+        // Wait for confirmation
         await tx.wait();
-        setToastMessage("Supply confirmed!");
-        setToastType("success");
-        setShowToast(true);
+
+        // Update to success
+        updateTransactionStatus("success", "Supply completed successfully!");
+
+        // Hide after 2 seconds
+        setTimeout(hideTransaction, 2000);
       } catch (error) {
         console.error("Error in supply process:", error);
-        setToastMessage("Error submitting supply request");
-        setToastType("error");
-        setShowToast(true);
+        // Update to error
+        updateTransactionStatus(
+          "error",
+          "Transaction failed. Please try again."
+        );
+
+        // Hide after 3 seconds
+        setTimeout(hideTransaction, 3000);
       }
     } else if (operation === "EXIT") {
       try {
         const unwrapNativeToken =
           isUnderlyingWrapNative && selectedToken === underlyingTokenSymb;
-        const tx = await withdrawSupplyFromSafe(amount, unwrapNativeToken);
-        setToastMessage("Withdraw request submitted!");
-        setToastType("info");
-        setShowToast(true);
+        // Show the overlay
+        showTransaction(
+          "Processing Withdraw",
+          "Please wait while we process your withdraw request..."
+        );
 
+        // Execute transaction
+        const tx = await withdrawSupplyFromSafe(amount, unwrapNativeToken);
+
+        // Update status to pending
+        updateTransactionStatus(
+          "pending",
+          "Transaction submitted! Waiting for confirmation..."
+        );
+
+        // Wait for confirmation
         await tx.wait();
-        setToastMessage("Withdraw supply confirmed!");
-        setToastType("success");
-        setShowToast(true);
+        // Update to success
+        updateTransactionStatus("success", "Withdraw completed successfully!");
+
+        // Hide after 2 seconds
+        setTimeout(hideTransaction, 2000);
       } catch (error) {
         console.error("Error in withdraw process:", error);
-        setToastMessage("Error submitting withdraw request");
-        setToastType("error");
-        setShowToast(true);
+        // Update to error
+        updateTransactionStatus(
+          "error",
+          "Transaction failed. Please try again."
+        );
+
+        // Hide after 3 seconds
+        setTimeout(hideTransaction, 3000);
       }
     } else if (operation === "CREATE") {
       try {
-        const tx = await createAccount();
-        setToastMessage("Account creation requested!");
-        setToastType("info");
-        setShowToast(true);
+        // Show the overlay
+        showTransaction(
+          "Processing Create Account",
+          "Please wait while we process your create account request..."
+        );
 
+        // Execute transaction
+        const tx = await createAccount();
+        // Update status to pending
+        updateTransactionStatus(
+          "pending",
+          "Transaction submitted! Waiting for confirmation..."
+        );
+
+        // Wait for confirmation
         await tx.wait();
-        setToastMessage("DAMM account created!");
-        setToastType("success");
-        setShowToast(true);
+        // Update to success
+        updateTransactionStatus(
+          "success",
+          "DAMM account successfully created!"
+        );
+
+        // Hide after 2 seconds
+        setTimeout(hideTransaction, 2000);
       } catch (error) {
         console.error("Error in create account process:", error);
-        setToastMessage("Error creating account");
-        setToastType("error");
-        setShowToast(true);
+        // Update to error
+        updateTransactionStatus(
+          "error",
+          "Transaction failed. Please try again."
+        );
+
+        // Hide after 3 seconds
+        setTimeout(hideTransaction, 3000);
       }
     }
     setAmount("");
     setOperation(null);
     // Invalidate and refetch vault data
     queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
+  };
+
+  const handleSelectionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (e.target.value === underlyingNativeTokenSymb) {
+      setToastMessage("ETH-SEP will be wrapped to WETH-SEP.");
+      setToastType("info");
+      setShowToast(true);
+    }
+    setSelectedToken(e.target.value);
   };
 
   const handleMaxClick = () => {
@@ -203,12 +278,12 @@ export default function SmartAccountView() {
       }
     };
 
-    if (address) {
+    if (safeAddress) {
       fetchSupplyReadyToWithdraw();
     } else {
       setSupplyReadyToWithdraw("");
     }
-  }, [getSuppplyBalanceFromSafe, address]);
+  }, [getSuppplyBalanceFromSafe, safeAddress]);
 
   useEffect(() => {
     let actions;
@@ -250,12 +325,6 @@ export default function SmartAccountView() {
   if (isLoading || isChangingView || !vaultData) {
     return <LoadingComponent text="Loading vault data..." />;
   }
-
-  const safeAddressShort =
-    safeAddress?.slice(0, 6) + "..." + safeAddress?.slice(-4);
-  const explorerLink = `${
-    getEnvVars(getTypedChainId(Number(network.chainId))).BLOCK_EXPLORER_GATEWAY
-  }/address/${safeAddress}`;
 
   return (
     vaultData && (
@@ -339,7 +408,7 @@ export default function SmartAccountView() {
                   label="Token"
                   options={[underlyingTokenSymb, underlyingNativeTokenSymb]}
                   value={selectedToken}
-                  onChange={(e) => setSelectedToken(e.target.value)}
+                  onChange={handleSelectionChange}
                 />
               )}
             {operation !== "CREATE" && (

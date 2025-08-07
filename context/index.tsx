@@ -15,6 +15,7 @@ import Providers from "./Providers";
 import { SafeLinkedAccountProvider } from "./SafeLinkedAccountContext";
 import ServerContent from "./ServerContent";
 import { ThemeProvider } from "./ThemeContext";
+import { TransactionProvider } from "./TransactionContext";
 import { VaultProvider } from "./VaultContext";
 import { ViewProvider } from "./ViewContext";
 
@@ -90,8 +91,10 @@ function ContextProvider({ children, cookies }: ContextProviderProps) {
           <ViewProvider>
             <SafeLinkedAccountProvider>
               <VaultProvider>
-                <WalletChangeHandler />
-                {children}
+                <TransactionProvider>
+                  <WalletChangeHandler />
+                  {children}
+                </TransactionProvider>
               </VaultProvider>
             </SafeLinkedAccountProvider>
           </ViewProvider>

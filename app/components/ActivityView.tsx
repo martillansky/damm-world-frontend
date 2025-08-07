@@ -1,3 +1,5 @@
+import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
+import { useTransaction } from "@/context/TransactionContext";
 import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { Transaction } from "@/lib/api/types/VaultData.types";
@@ -6,19 +8,23 @@ import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import CheckIcon from "./icons/CheckIcon";
 import CloseIcon from "./icons/CloseIcon";
 import DoubleCheckIcon from "./icons/DoubleCheckIcon";
 import WaitingSettlementIcon from "./icons/WaitingSettlementIcon";
+import Button from "./ui/common/Button";
 import Card from "./ui/common/Card";
+import Dialog, {
+  DialogActionButtons,
+  DialogContents,
+} from "./ui/common/Dialog";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import Select from "./ui/common/Select";
-import Toast, { ToastType } from "./ui/common/Toast";
+import WarningCard from "./ui/common/WarningCard";
 
 export default function ActivityView() {
-  const { address } = useParams();
+  const { safeAddress } = useSafeLinkedAccountContext();
   const { chainId } = useAppKitNetwork();
   const { vault, isLoading } = useVault();
   const queryClient = useQueryClient();
@@ -29,23 +35,60 @@ export default function ActivityView() {
     () => vault?.activityData ?? [],
     [vault?.activityData]
   );
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState<ToastType>("info");
+  const { showTransaction, updateTransactionStatus, hideTransaction } =
+    useTransaction();
+  const [showDialog, setShowDialog] = useState(false);
+  const [cancelRequested, setCancelRequested] = useState<{
+    txId: string;
+    status: string;
+  } | null>(null);
+
+  const isCancelRequested = (txId: string) => {
+    // Allows to hide the cancel button after the transaction is confirmed, waiting for indexer to update the status
+    return (
+      cancelRequested?.txId === txId && cancelRequested?.status === "confirmed"
+    );
+  };
 
   const handleCancelDeposit = async () => {
-    const tx = await cancelDepositRequest();
-    setToastMessage("Cancel deposit request submitted!");
-    setToastType("info");
-    setShowToast(true);
+    setShowDialog(false);
+    try {
+      // Show the overlay
+      showTransaction(
+        "Processing Cancel Deposit",
+        "Please wait while we process your cancel deposit request..."
+      );
 
-    await tx.wait();
-    setToastMessage("Deposit request successfully canceled!");
-    setToastType("success");
-    setShowToast(true);
+      // Execute transaction
+      const tx = await cancelDepositRequest();
+      // Update status to pending
+      updateTransactionStatus(
+        "pending",
+        "Transaction submitted! Waiting for confirmation..."
+      );
 
+      // Wait for confirmation
+      await tx.wait();
+
+      // Update to success
+      updateTransactionStatus(
+        "success",
+        "Deposit request successfully canceled!"
+      );
+      // Hide after 2 seconds
+      setTimeout(hideTransaction, 2000);
+      setCancelRequested((prev) =>
+        prev ? { ...prev, status: "confirmed" } : null
+      );
+    } catch (error) {
+      console.error("Error in cancel deposit process:", error);
+      // Update to error
+      updateTransactionStatus("error", "Transaction failed. Please try again.");
+      // Hide after 3 seconds
+      setTimeout(hideTransaction, 3000);
+    }
     // Invalidate and refetch vault data
-    queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
+    queryClient.invalidateQueries({ queryKey: ["vaultData", safeAddress] });
   };
 
   useEffect(() => {
@@ -70,10 +113,17 @@ export default function ActivityView() {
   };
 
   const getActionButton = (tx: Transaction) => {
-    if (tx.type === "deposit" && tx.status === "waiting_settlement") {
+    if (
+      tx.type === "deposit" &&
+      tx.status === "waiting_settlement" &&
+      !isCancelRequested(tx.id)
+    ) {
       return (
         <button
-          onClick={() => handleCancelDeposit()}
+          onClick={() => {
+            setShowDialog(true);
+            setCancelRequested({ txId: tx.id, status: "pending" });
+          }}
           className="p-1.5 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors border-2 border-red-500/80 hover:border-red-500"
         >
           <CloseIcon className="w-4 h-4" />
@@ -218,14 +268,29 @@ export default function ActivityView() {
           {getTxsTable()}
         </Card>
 
-        {/* Toast */}
-        <Toast
-          show={showToast}
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-          duration={5000}
-        />
+        {/* Dialog */}
+        <Dialog
+          open={showDialog}
+          onClose={() => setShowDialog(false)}
+          title="Cancel Deposit"
+        >
+          <DialogContents>
+            <WarningCard title="Cancel Deposit Request Disclaimer">
+              Cancelling your deposit request will:
+              <br />• Cancel the deposit request
+              <br />• Restore the underlying asset to your DAMM account
+              <br />
+              <br />
+              This action is irreversible.
+            </WarningCard>
+          </DialogContents>
+          <DialogActionButtons>
+            <Button variant="secondary" onClick={() => setShowDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCancelDeposit}>Confirm</Button>
+          </DialogActionButtons>
+        </Dialog>
       </>
     )
   );

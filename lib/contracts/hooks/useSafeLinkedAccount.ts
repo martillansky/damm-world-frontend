@@ -149,23 +149,34 @@ export function useSafeLinkedAccount() {
         setClient(client);
         const { underlyingToken, vault, tokenMetadata } =
           await getSignerAndContract(chain.id.toString());
+        const [availableSupply, shares] = isDeployed
+          ? publicClient
+            ? await Promise.all([
+                publicClient?.readContract({
+                  address: underlyingToken.address as `0x${string}`,
+                  abi: underlyingToken.interface.fragments,
+                  functionName: "balanceOf",
+                  args: [safeAddress],
+                }) as unknown as bigint,
+                publicClient?.readContract({
+                  address: vault.address as `0x${string}`,
+                  abi: vault.interface.fragments,
+                  functionName: "balanceOf",
+                  args: [safeAddress],
+                }) as unknown as bigint,
+              ])
+            : await Promise.all([
+                underlyingToken.balanceOf(safeAddress),
+                vault.balanceOf(safeAddress),
+              ])
+          : [0, 0];
         setState({
           safeAddress,
           isDeployed,
           isLoading: false,
           error: null,
-          availableSupply: isDeployed
-            ? formatUnits(
-                await underlyingToken.balanceOf(safeAddress),
-                tokenMetadata.decimals
-              )
-            : "0",
-          shares: isDeployed
-            ? formatUnits(
-                await vault.balanceOf(safeAddress),
-                tokenMetadata.decimals
-              )
-            : "0",
+          availableSupply: formatUnits(availableSupply, tokenMetadata.decimals),
+          shares: formatUnits(shares, tokenMetadata.decimals),
         });
       } catch (error) {
         console.log("ERROR INITIALIZING SAFE", error);
@@ -209,6 +220,8 @@ export function useSafeLinkedAccount() {
 
     try {
       const txResponse = await executeSafeTransaction(txs);
+      // Refresh balances after successful transaction
+      await refreshBalances();
       return txResponse as unknown as TransactionResponse;
     } catch (error) {
       console.error("Error executing safe transaction:", error);
@@ -285,12 +298,18 @@ export function useSafeLinkedAccount() {
       chain,
     });
     setState((s) => ({ ...s, isDeployed: true }));
+
+    // Wait for deployment and refresh balances
+    const receipt = await client
+      .extend(publicActions)
+      .waitForTransactionReceipt({ hash: txHash });
+
+    // Refresh balances after deployment
+    await refreshBalances();
+
     return {
       hash: txHash,
-      wait: () =>
-        client
-          .extend(publicActions)
-          .waitForTransactionReceipt({ hash: txHash }),
+      wait: () => Promise.resolve(receipt),
     };
   };
 
@@ -317,6 +336,8 @@ export function useSafeLinkedAccount() {
 
     try {
       const txResponse = await executeSafeTransaction(txs);
+      // Refresh balances after successful transaction
+      await refreshBalances();
       return txResponse as unknown as TransactionResponse;
     } catch (error) {
       console.error("Error executing safe transaction:", error);
@@ -324,8 +345,63 @@ export function useSafeLinkedAccount() {
     }
   };
 
+  const refreshBalances = async () => {
+    if (
+      !state.safeAddress ||
+      !state.isDeployed ||
+      !network.chainId ||
+      !publicClient
+    )
+      return;
+
+    try {
+      const { underlyingToken, vault, tokenMetadata } =
+        await getSignerAndContract(network.chainId.toString());
+
+      const [availableSupply, shares] = await Promise.all([
+        publicClient.readContract({
+          address: underlyingToken.address as `0x${string}`,
+          abi: underlyingToken.interface.fragments,
+          functionName: "balanceOf",
+          args: [state.safeAddress as `0x${string}`],
+        }),
+        publicClient.readContract({
+          address: vault.address as `0x${string}`,
+          abi: vault.interface.fragments,
+          functionName: "balanceOf",
+          args: [state.safeAddress as `0x${string}`],
+        }),
+      ]);
+
+      setState((prev) => ({
+        ...prev,
+        availableSupply: formatUnits(
+          availableSupply as bigint,
+          tokenMetadata.decimals
+        ),
+        shares: formatUnits(shares as bigint, tokenMetadata.decimals),
+      }));
+    } catch (error) {
+      console.error("Error refreshing balances:", error);
+    }
+  };
+
+  // Refresh balances periodically and after transactions
+  useEffect(() => {
+    if (!state.isDeployed || !state.safeAddress) return;
+
+    // Initial refresh
+    refreshBalances();
+
+    // Set up interval for periodic refresh (every 10 seconds)
+    const interval = setInterval(refreshBalances, 10000);
+
+    return () => clearInterval(interval);
+  }, [state.isDeployed, state.safeAddress, network.chainId]);
+
   return {
     ...state,
+    refreshBalances,
     executeFundSmartAccountWorkflow,
     deploySafeAsSpender,
     executeSafeTransaction,

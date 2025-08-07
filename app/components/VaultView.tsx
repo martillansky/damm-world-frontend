@@ -1,6 +1,7 @@
 import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
 import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
+import { useTransaction } from "@/context/TransactionContext";
 import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
@@ -23,7 +24,6 @@ import Dialog, {
 import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
-import Toast, { ToastType } from "./ui/common/Toast";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
@@ -38,9 +38,10 @@ export default function VaultView() {
     () => vault?.vaultData,
     [vault?.vaultData]
   );
+  const { showTransaction, updateTransactionStatus, hideTransaction } =
+    useTransaction();
   const { submitRequestDeposit } = useDeposit();
   const { submitRequestWithdraw } = useWithdraw();
-
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
 
@@ -60,9 +61,6 @@ export default function VaultView() {
 
   const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
     useState<string>("");
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState<ToastType>("info");
 
   useEffect(() => {
     if (!isLoading && vaultData) {
@@ -79,37 +77,78 @@ export default function VaultView() {
     setShowDialog(false);
     if (operation === "DEPOSIT") {
       try {
-        const tx = await submitRequestDeposit(amount);
-        setToastMessage("Deposit request submitted!");
-        setToastType("info");
-        setShowToast(true);
+        // Show the overlay
+        showTransaction(
+          "Processing Deposit",
+          "Please wait while we process your deposit request..."
+        );
 
+        // Execute transaction
+        const tx = await submitRequestDeposit(amount);
+
+        // Update status to pending
+        updateTransactionStatus(
+          "pending",
+          "Transaction submitted! Waiting for confirmation..."
+        );
+
+        // Wait for confirmation
         await tx.wait();
-        setToastMessage("Deposit request confirmed!");
-        setToastType("success");
-        setShowToast(true);
+
+        // Update to success
+        updateTransactionStatus("success", "Deposit completed successfully!");
+
+        // Hide after 2 seconds
+        setTimeout(hideTransaction, 2000);
       } catch (error) {
         console.error("Error in deposit process:", error);
-        setToastMessage("Error submitting deposit request");
-        setToastType("error");
-        setShowToast(true);
+        // Update to error
+        updateTransactionStatus(
+          "error",
+          "Transaction failed. Please try again."
+        );
+
+        // Hide after 3 seconds
+        setTimeout(hideTransaction, 3000);
       }
     } else {
       try {
-        const tx = await submitRequestWithdraw(amount);
-        setToastMessage("Withdraw request submitted!");
-        setToastType("info");
-        setShowToast(true);
+        // Show the overlay
+        showTransaction(
+          "Processing Withdraw Request",
+          "Please wait while we process your withdraw request..."
+        );
 
+        // Execute transaction
+        const tx = await submitRequestWithdraw(amount);
+
+        // Update status to pending
+        updateTransactionStatus(
+          "pending",
+          "Transaction submitted! Waiting for confirmation..."
+        );
+
+        // Wait for confirmation
         await tx.wait();
-        setToastMessage("Withdraw request confirmed!");
-        setToastType("success");
-        setShowToast(true);
+
+        // Update to success
+        updateTransactionStatus(
+          "success",
+          "Withdraw request completed successfully!"
+        );
+
+        // Hide after 2 seconds
+        setTimeout(hideTransaction, 2000);
       } catch (error) {
-        console.error("Error in withdraw process:", error);
-        setToastMessage("Error submitting withdraw request");
-        setToastType("error");
-        setShowToast(true);
+        console.error("Error in withdraw request process:", error);
+        // Update to error
+        updateTransactionStatus(
+          "error",
+          "Transaction failed. Please try again."
+        );
+
+        // Hide after 3 seconds
+        setTimeout(hideTransaction, 3000);
       }
     }
     setAmount("");
@@ -288,15 +327,6 @@ export default function VaultView() {
             </Button>
           </DialogActionButtons>
         </Dialog>
-
-        {/* Toast */}
-        <Toast
-          show={showToast}
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-          duration={5000}
-        />
       </>
     )
   );
