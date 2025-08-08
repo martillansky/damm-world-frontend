@@ -58,8 +58,8 @@ export default function PositionView() {
       try {
         // Show the overlay
         showTransaction(
-          "Processing Redeem",
-          "Please wait while we process your redeem request..."
+          "Processing Withdraw completion",
+          "Please wait while we process your withdraw completion..."
         );
 
         // Execute transaction
@@ -75,12 +75,12 @@ export default function PositionView() {
         await tx.wait();
 
         // Update to success
-        updateTransactionStatus("success", "Redeem request confirmed!");
+        updateTransactionStatus("success", "Withdraw completion confirmed!");
 
         // Hide after 2 seconds
         setTimeout(hideTransaction, 2000);
       } catch (error) {
-        console.error("Error in redeem process:", error);
+        console.error("Error in withdraw completion process:", error);
         // Update to error
         updateTransactionStatus(
           "error",
@@ -108,7 +108,7 @@ export default function PositionView() {
   useEffect(() => {
     const actions = createActions(["REDEEM" /* "CLAIM", "SEND" */], {
       REDEEM: {
-        label: "Redeem",
+        label: "Complete Withdraw",
         icon: <RedeemIcon />,
         onClick: () => handleOperation("REDEEM"),
       },
@@ -153,10 +153,10 @@ export default function PositionView() {
           <CardRow left="USDC Balance" right={positionData?.usdcBalance} />
         </Card>
 
-        <Card title="Redeemable Assets" variant="small">
+        <Card title="Withdrawable Assets" variant="small">
           <CardRow
-            left="Available to Redeem"
-            tooltip="Assets available to redeem after withdrawal requests are settled"
+            left="Available to Withdraw"
+            tooltip="Assets available to withdraw after initiated withdrawals are completed"
             right={positionData?.availableToRedeem}
             highlightedRight
             secondaryRight={positionData?.availableToRedeemUSD}
@@ -165,8 +165,8 @@ export default function PositionView() {
 
         <Card title="Share Information" variant="small">
           <CardRow
-            left="Vault Share"
-            tooltip="Proportional ownership of the total assets in this vault"
+            left="Fund Share"
+            tooltip="Proportional ownership of the total assets in this fund"
             right={positionData?.vaultShare}
           />
           {/* <CardRow
@@ -176,8 +176,8 @@ export default function PositionView() {
             highlightedRight
           /> */}
           <CardRow
-            left="Shares in Wallet"
-            tooltip="Shares that are currently in your wallet"
+            left="Shares in Account"
+            tooltip="Shares that are currently in your account"
             right={positionData?.sharesInWallet}
           />
         </Card>
@@ -190,7 +190,7 @@ export default function PositionView() {
             operation === "CLAIM"
               ? "Claim vWLD"
               : operation === "REDEEM"
-              ? "Redeem WLD"
+              ? "Complete Withdraw WLD"
               : "Send vWLD"
           }
         >
@@ -218,11 +218,11 @@ export default function PositionView() {
                   placeholder="0x"
                 />
                 <WarningCard title="Transfer Disclaimer">
-                  Transferring your vault shares (vWLD) to another wallet will:
+                  Transferring your fund shares (vWLD) to another wallet will:
                   <br />• Remove them from your position
                   <br />• Stop generating yield
-                  <br />• Exclude them from your total vault share and
-                  redeemable assets
+                  <br />• Exclude them from your total fund share and
+                  withdrawable assets
                   <br />
                   <br />
                   This action is irreversible. Make sure you understand the
@@ -239,7 +239,7 @@ export default function PositionView() {
               {operation === "CLAIM"
                 ? "Claim"
                 : operation === "REDEEM"
-                ? "Redeem"
+                ? "Confirm"
                 : "Send"}
             </Button>
           </DialogActionButtons>

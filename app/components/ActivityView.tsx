@@ -136,13 +136,13 @@ export default function ActivityView() {
   const getTransactionType = (type: string) => {
     switch (type) {
       case "deposit":
-        return "Deposit";
+        return "Invest";
       case "withdraw":
-        return "Withdraw";
+        return "Init Withdraw";
       case "claim":
         return "Claim";
       case "redeem":
-        return "Redeem";
+        return "Withdraw";
       case "claim_and_redeem":
         return "Claim & Redeem";
       case "sent":
@@ -236,7 +236,7 @@ export default function ActivityView() {
         <Card
           title="Recent Activity"
           variant="small"
-          subtitle="Transaction activity for this liquidity vault"
+          subtitle="Transaction activity for this investment fund"
           selector={
             <Select
               value={filter}

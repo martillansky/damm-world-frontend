@@ -69,14 +69,14 @@ export default function MetricsView() {
   }, [setActions]);
 
   if (isLoading || isChangingView || !vaultData) {
-    return <LoadingComponent text="Loading vault data..." />;
+    return <LoadingComponent text="Loading account data..." />;
   }
 
   return (
     vaultData && (
       <>
         <ChartCard
-          title="Vault Performance"
+          title="Fund Performance"
           subtitle="Historical performance metrics and trends"
           selector={
             <Select
@@ -84,7 +84,7 @@ export default function MetricsView() {
               onChange={(e) => setFilter(e.target.value)}
               options={["all", "WLD/USDC", "WLD/DAI", "WLD/USDT"]}
               displayLabels={{
-                all: "All Vaults",
+                all: "All Funds",
                 "WLD/USDC": "WLD/USDC",
                 "WLD/DAI": "WLD/DAI",
                 "WLD/USDT": "WLD/USDT",

@@ -6,8 +6,8 @@ export default function SubHeader() {
   const { isDeployed } = useSafeLinkedAccountContext();
   const isInvestmentFund = view === "smartAccount" || view === "metrics";
 
-  const title = isInvestmentFund ? "Investment Fund" : "WLD/USDC Pool";
-  const statusLabel = isInvestmentFund ? "Status:" : "Vault status:";
+  const title = isInvestmentFund ? "DAMM Account" : "WLD/USDC Pool";
+  const statusLabel = isInvestmentFund ? "Status:" : "Fund Status:";
   const status = isInvestmentFund
     ? isDeployed
       ? "Deployed"
@@ -23,23 +23,24 @@ export default function SubHeader() {
       <div className="mb-1">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">{title}</h2>
-          <div className="flex items-center space-x-2">
-            <p className="text-muted-light dark:text-muted">{statusLabel}</p>
-            <span className={statusClassname}>{status}</span>
-          </div>
+          {!isInvestmentFund && (
+            <div className="flex items-center space-x-2">
+              <p className="text-muted-light dark:text-muted">{statusLabel}</p>
+              <span className={statusClassname}>{status}</span>
+            </div>
+          )}
         </div>
       </div>
       {view === "vault" && (
         <p className="text-sm text-muted-light dark:text-muted">
-          A vault run by DAMM Capital on Uniswap V4 in a sophisticated, active
-          manner.
+          An investment fund run by DAMM Capital on Uniswap V4 in a
+          sophisticated, active manner.
         </p>
       )}
       {view === "smartAccount" && (
         <p className="text-sm text-muted-light dark:text-muted">
-          Your DAMM Investment Fund is a private smart contract wallet (Safe)
-          deployed specifically for your account. It acts as your personal
-          gateway to deposit into and manage positions across DAMM vaults.
+          Your DAMM account acts as your personal gateway to deposit into and
+          manage positions across DAMM investment funds.
         </p>
       )}
     </div>

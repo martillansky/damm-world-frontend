@@ -14,9 +14,11 @@ import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
 import { BaseActionKey, createActions } from "./ui/common/Action";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
+import ChartCard from "./ui/common/ChartCard";
 import Dialog, {
   DialogActionButtons,
   DialogContents,
@@ -24,6 +26,7 @@ import Dialog, {
 import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
+import Select from "./ui/common/Select";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
@@ -44,6 +47,7 @@ export default function VaultView() {
   const { submitRequestWithdraw } = useWithdraw();
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
+  const [filter, setFilter] = useState("all");
 
   type VaultActionKey = BaseActionKey & ("DEPOSIT" | "WITHDRAW");
   const [operation, setOperation] = useState<VaultActionKey | null>(null);
@@ -200,12 +204,12 @@ export default function VaultView() {
   useEffect(() => {
     const actions = createActions(["DEPOSIT", "WITHDRAW"], {
       DEPOSIT: {
-        label: "Deposit",
+        label: "Invest",
         icon: <ArrowUpIcon />,
         onClick: () => handleOperation("DEPOSIT"),
       },
       WITHDRAW: {
-        label: "Withdraw",
+        label: "Init Withdraw",
         icon: <ArrowDownIcon />,
         onClick: () => handleOperation("WITHDRAW"),
       },
@@ -224,16 +228,16 @@ export default function VaultView() {
   }, [setActions]);
 
   if (isLoading || isChangingView || !vaultData) {
-    return <LoadingComponent text="Loading vault data..." />;
+    return <LoadingComponent text="Loading fund data..." />;
   }
 
   return (
     vaultData && (
       <>
         <Card
-          title="Vault Overview"
-          subtitle="Performance metrics for this liquidity vault"
-          variant="large"
+          title="Fund Overview"
+          subtitle="Performance metrics for this investment fund"
+          variant="small"
         >
           <CardRow
             left="TVL"
@@ -247,12 +251,12 @@ export default function VaultView() {
             right={vaultData.apr}
             secondaryRight={vaultData.aprChange}
           />
-          <CardRow
+          {/* <CardRow
             left="Value Gained"
             highlightedRight
             right={vaultData.valueGained}
             secondaryRight={vaultData.valueGainedUSD}
-          />
+          /> */}
           <CardRow
             left="Your Position"
             right={vaultData.position}
@@ -260,14 +264,35 @@ export default function VaultView() {
           />
         </Card>
 
+        <ChartCard
+          title="Fund Performance"
+          subtitle="Historical performance metrics and trends"
+          selector={
+            <Select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              options={["all", "WLD/USDC", "WLD/DAI", "WLD/USDT"]}
+              displayLabels={{
+                all: "All Funds",
+                "WLD/USDC": "WLD/USDC",
+                "WLD/DAI": "WLD/DAI",
+                "WLD/USDT": "WLD/USDT",
+              }}
+              size="small"
+            />
+          }
+        >
+          <StackedAreaChart vaultName={filter} />
+        </ChartCard>
+
         {/* Dialog */}
         <Dialog
           open={showDialog}
           onClose={() => setShowDialog(false)}
           title={
             operation === "DEPOSIT"
-              ? `Deposit ${underlyingTokenSymb}`
-              : `Withdraw ${underlyingTokenSymb}`
+              ? `Invest ${underlyingTokenSymb}`
+              : `Init ${underlyingTokenSymb} Withdraw`
           }
         >
           <DialogContents>
@@ -289,30 +314,30 @@ export default function VaultView() {
             />
 
             {operation === "DEPOSIT" && (
-              <ObservationCard title="Deposit Process">
-                This is a two-step process:
+              <ObservationCard title="Investing Process">
+                Investing in a DAMM fund implies:
                 <br />
-                1. Your {underlyingTokenSymb} will be deposited into the vault
+                1. Depositing your {underlyingTokenSymb} into the fund.
                 <br />
-                2. You&apos;ll receive {shareTokenSymb} shares
+                2. You&apos;ll receive {shareTokenSymb} shares in your account.
               </ObservationCard>
             )}
 
             {operation === "WITHDRAW" && (
               <>
                 <ObservationCard title="Withdrawal Process">
-                  This is a two-step process:
+                  Due to security reasons, our managers will:
                   <br />
-                  1. Your {shareTokenSymb} shares will be burned
+                  1. Verify and approve this request for authenticity.
                   <br />
-                  2. You&apos;ll need to redeem your {underlyingTokenSymb}{" "}
-                  assets after settlement
+                  2. Swap your {shareTokenSymb} shares into{" "}
+                  {underlyingTokenSymb} in this investment fund.
                 </ObservationCard>
 
                 <WarningCard title="Withdrawal Disclaimer">
-                  Withdrawn assets will stop generating yield and will no longer
-                  be part of the total value. Redeem them anytime after
-                  settlement.
+                  Once the withdraw is initiated, your assets will stop
+                  generating yield. For receiving your assets back in your
+                  account, you can complete the withdraw anytime after approval.
                 </WarningCard>
               </>
             )}
@@ -323,7 +348,7 @@ export default function VaultView() {
               Cancel
             </Button>
             <Button onClick={handleSubmit}>
-              {operation === "DEPOSIT" ? "Deposit" : "Withdraw"}
+              {operation === "DEPOSIT" ? "Invest" : "Init Withdraw"}
             </Button>
           </DialogActionButtons>
         </Dialog>

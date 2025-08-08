@@ -78,11 +78,11 @@ export default function SmartAccountView() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<ToastType>("info");
-  const safeAddressShort =
+  /* const safeAddressShort =
     safeAddress?.slice(0, 6) + "..." + safeAddress?.slice(-4);
   const explorerLink = `${
     getEnvVars(getTypedChainId(Number(network.chainId))).BLOCK_EXPLORER_GATEWAY
-  }/address/${safeAddress}`;
+  }/address/${safeAddress}`; */
 
   useEffect(() => {
     const retrieveNativeBalance = async () => {
@@ -117,8 +117,8 @@ export default function SmartAccountView() {
           isUnderlyingWrapNative && selectedToken !== underlyingTokenSymb;
         // Show the overlay
         showTransaction(
-          "Processing Supply",
-          "Please wait while we process your supply request..."
+          "Processing Deposit",
+          "Please wait while we process your deposit request..."
         );
 
         // Execute transaction
@@ -134,12 +134,12 @@ export default function SmartAccountView() {
         await tx.wait();
 
         // Update to success
-        updateTransactionStatus("success", "Supply completed successfully!");
+        updateTransactionStatus("success", "Deposit completed successfully!");
 
         // Hide after 2 seconds
         setTimeout(hideTransaction, 2000);
       } catch (error) {
-        console.error("Error in supply process:", error);
+        console.error("Error in deposit process:", error);
         // Update to error
         updateTransactionStatus(
           "error",
@@ -290,12 +290,12 @@ export default function SmartAccountView() {
     if (isDeployed) {
       actions = createActions(["SUPPLY", "EXIT"], {
         SUPPLY: {
-          label: "Supply",
+          label: "Deposit",
           icon: <ArrowUpIcon />,
           onClick: () => handleOperation("SUPPLY"),
         },
         EXIT: {
-          label: "Exit",
+          label: "Withdraw",
           icon: <ArrowDownIcon />,
           onClick: () => handleOperation("EXIT"),
         },
@@ -323,7 +323,7 @@ export default function SmartAccountView() {
   }, [setActions, isDeployed]);
 
   if (isLoading || isChangingView || !vaultData) {
-    return <LoadingComponent text="Loading vault data..." />;
+    return <LoadingComponent text="Loading account data..." />;
   }
 
   return (
@@ -331,7 +331,7 @@ export default function SmartAccountView() {
       <>
         {isDeployed ? (
           <>
-            <Card title="Balance" variant="small">
+            <Card title="Balance" variant="large">
               <CardRow
                 left="Available supply"
                 right={`${availableSupply} ${underlyingTokenSymb}`}
@@ -344,7 +344,7 @@ export default function SmartAccountView() {
               />
             </Card>
 
-            <Card title="Deployment" variant="small">
+            {/* <Card title="Deployment" variant="small">
               <CardRow
                 left="Your private fund address"
                 right={
@@ -358,7 +358,7 @@ export default function SmartAccountView() {
                   </a>
                 }
               />
-            </Card>
+            </Card> */}
           </>
         ) : (
           <div className="flex flex-col items-center min-h-[calc(100vh-300px)]">
@@ -382,7 +382,7 @@ export default function SmartAccountView() {
               <Card
                 title="Welcome to DAMM World"
                 variant="small"
-                subtitle="Provide an initial supply to deploy your smart account and begin investing in our vaults."
+                subtitle="Create your DAMM account, provide an initial deposit, and begin investing in our funds."
               />
             </div>
           </div>
@@ -435,24 +435,11 @@ export default function SmartAccountView() {
             )}
             {operation === "SUPPLY" && (
               <>
-                {!isDeployed && (
-                  <ObservationCard title="Supply Process">
-                    This is a two-step process:
-                    <br />
-                    1. Your private DAMM investment fund will be deployed.
-                    <br />
-                    2. We request your authorization in advance to enable your
-                    private investment fund to borrow tokens from your wallet at
-                    your only request.
-                  </ObservationCard>
-                )}
                 <WarningCard title="Disclaimer">
                   You will be able to:
-                  <br />- Supply {underlyingTokenSymb} tokens to your investment
-                  fund.
-                  <br />
-                  - Deposit and manage position in our vaults.
-                  <br />- Exit at anytime, receiving back the assets to your
+                  <br />- Deposit {underlyingTokenSymb} tokens and manage
+                  positions in our investment funds.
+                  <br />- Withdraw at anytime, receiving back the assets to your
                   wallet.
                 </WarningCard>
               </>
@@ -460,38 +447,29 @@ export default function SmartAccountView() {
 
             {operation === "EXIT" && (
               <>
-                <ObservationCard title="Exit Process">
-                  In this process your available supply of {underlyingTokenSymb}{" "}
-                  tokens will deposited back to your wallet.
+                <ObservationCard title="Withdraw Process">
+                  In this process your available deposit of{" "}
+                  {underlyingTokenSymb} tokens will be returned to your wallet.
                 </ObservationCard>
-
-                <WarningCard title="Exit Disclaimer">
-                  To withdraw your shares, you must complete the required
-                  process in the respective vault leaving your supply available
-                  for exiting the fund.
-                </WarningCard>
+                {isUnderlyingWrapNative && (
+                  <WarningCard title="Withdraw Disclaimer">
+                    You will need to approve the swap of your{" "}
+                    {underlyingTokenSymb} tokens into{" "}
+                    {underlyingNativeTokenSymb}.
+                  </WarningCard>
+                )}
               </>
             )}
             {operation === "CREATE" && (
               <>
                 <ObservationCard title="Create Account">
-                  This is a two-step process which requires:
-                  <br />
-                  1. Your signature for approving the creation of your private
-                  DAMM account.
-                  <br />
-                  2. To trigger the transaction to create your private DAMM
-                  account.
-                </ObservationCard>
-
-                <WarningCard title="Disclaimer">
                   You will be able to:
-                  <br />- Supply {underlyingTokenSymb} tokens to your DAMM
+                  <br />- Deposit {underlyingTokenSymb} tokens to your DAMM
                   account.
-                  <br />- Deposit and manage position in our vaults.
-                  <br />- Exit at anytime, receiving back the assets to your
+                  <br />- Invest and manage positions in our funds.
+                  <br />- Withdraw at anytime, receiving back the assets to your
                   wallet.
-                </WarningCard>
+                </ObservationCard>
               </>
             )}
           </DialogContents>

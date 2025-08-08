@@ -4,7 +4,7 @@ import ActivityIcon from "../../icons/ActivityIcon";
 import PositionIcon from "../../icons/PositionIcon";
 import SmartAccountIcon from "../../icons/SmartAccountIcon";
 import VaultIcon from "../../icons/VaultIcon";
-import VaultPerformanceIcon from "../../icons/VaultPerformanceIcon";
+//import VaultPerformanceIcon from "../../icons/VaultPerformanceIcon";
 
 export default function Footer() {
   const { view, setView } = useView();
@@ -20,20 +20,20 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-center items-center py-2 gap-6">
           <FooterButton
-            label="Fund"
+            label="Account"
             icon={<SmartAccountIcon />}
             active={view === "smartAccount"}
             onClick={() => handleViewChange("smartAccount")}
           />
-          <FooterButton
+          {/* <FooterButton
             label="Metrics"
             icon={<VaultPerformanceIcon />}
             active={view === "metrics"}
             onClick={() => handleViewChange("metrics")}
-          />
+          /> */}
           <div className="w-px h-8 bg-border-light dark:bg-zinc-700" />
           <FooterButton
-            label="Vault"
+            label="Fund"
             icon={<VaultIcon />}
             active={view === "vault"}
             onClick={() => handleViewChange("vault")}
