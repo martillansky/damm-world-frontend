@@ -17,6 +17,16 @@ function makeQueryClient() {
         gcTime: 30 * 60 * 1000, // Keep unused data in cache for 30 minutes
         refetchOnWindowFocus: false, // Don't refetch when window regains focus
         refetchOnMount: false, // Don't refetch when component mounts if data is fresh
+        retry: (failureCount, error) => {
+          // Don't retry on network errors that might cause hydration issues
+          if (
+            error instanceof Error &&
+            error.message.includes("Failed to fetch")
+          ) {
+            return false;
+          }
+          return failureCount < 3;
+        },
       },
     },
   });

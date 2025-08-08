@@ -40,8 +40,18 @@ export function useGetVaultDataDirectly() {
       // for calculating the rate of the share.
       position = userBalance + sharesReadyToClaim; // + redeemableAssets;
       positionUSD = position * wldConversionRate;
-    } catch (error) {
-      throw error;
+    } catch {
+      // Return default values if there's an error (e.g., no address)
+      return {
+        tvl: 0,
+        tvlChange: 0,
+        apr: 0,
+        aprChange: 0,
+        valueGained: 0,
+        valueGainedUSD: 0,
+        position: 0,
+        positionUSD: 0,
+      };
     }
     return {
       tvl: tvlUSD,
@@ -56,69 +66,87 @@ export function useGetVaultDataDirectly() {
   };
 
   const getPositionData = async (): Promise<PositionData> => {
-    return {
-      totalValue: position,
-      totalValueUSD: positionUSD,
-      wldBalance: userBalance,
-      usdcBalance: 0,
-      availableToRedeem: redeemableAssets,
-      availableToRedeemUSD: redeemableAssets * wldConversionRate,
-      vaultShare: tvlUSD > 0 ? (positionUSD * 100) / tvlUSD : 0,
-      claimableShares: sharesReadyToClaim,
-      sharesInWallet: userBalance,
-    };
+    try {
+      return {
+        totalValue: position,
+        totalValueUSD: positionUSD,
+        wldBalance: userBalance,
+        usdcBalance: 0,
+        availableToRedeem: redeemableAssets,
+        availableToRedeemUSD: redeemableAssets * wldConversionRate,
+        vaultShare: tvlUSD > 0 ? (positionUSD * 100) / tvlUSD : 0,
+        claimableShares: sharesReadyToClaim,
+        sharesInWallet: userBalance,
+      };
+    } catch {
+      return {
+        totalValue: 0,
+        totalValueUSD: 0,
+        wldBalance: 0,
+        usdcBalance: 0,
+        availableToRedeem: 0,
+        availableToRedeemUSD: 0,
+        vaultShare: 0,
+        claimableShares: 0,
+        sharesInWallet: 0,
+      };
+    }
   };
 
   const getActivityData = async (): Promise<Transaction[]> => {
-    const txs = await getRecentTxs();
-    return txs.map((tx, index) => {
-      const functType =
-        tx.functionName === "deposit"
-          ? "deposit"
-          : tx.functionName === "redeem"
-          ? "redeem"
-          : tx.functionName === "requestDeposit"
-          ? "deposit"
-          : tx.functionName === "requestRedeem"
-          ? "withdraw"
-          : "unknown";
-      const functStatus =
-        tx.functionName === "deposit"
-          ? "completed"
-          : tx.functionName === "redeem"
-          ? "completed"
-          : tx.functionName === "requestDeposit" &&
-            !tx.isSettled &&
-            !tx.isCanceled
-          ? "waiting_settlement"
-          : tx.functionName === "requestDeposit" &&
-            tx.isSettled &&
-            !tx.isCanceled
-          ? "settled"
-          : tx.functionName === "requestDeposit" &&
-            !tx.isSettled &&
-            tx.isCanceled
-          ? "failed"
-          : tx.functionName === "requestRedeem" && !tx.isSettled
-          ? "waiting_settlement"
-          : tx.functionName === "requestRedeem" && tx.isSettled
-          ? "completed"
-          : "unknown";
+    try {
+      const txs = await getRecentTxs();
+      return txs.map((tx, index) => {
+        const functType =
+          tx.functionName === "deposit"
+            ? "deposit"
+            : tx.functionName === "redeem"
+            ? "redeem"
+            : tx.functionName === "requestDeposit"
+            ? "deposit"
+            : tx.functionName === "requestRedeem"
+            ? "withdraw"
+            : "unknown";
+        const functStatus =
+          tx.functionName === "deposit"
+            ? "completed"
+            : tx.functionName === "redeem"
+            ? "completed"
+            : tx.functionName === "requestDeposit" &&
+              !tx.isSettled &&
+              !tx.isCanceled
+            ? "waiting_settlement"
+            : tx.functionName === "requestDeposit" &&
+              tx.isSettled &&
+              !tx.isCanceled
+            ? "settled"
+            : tx.functionName === "requestDeposit" &&
+              !tx.isSettled &&
+              tx.isCanceled
+            ? "failed"
+            : tx.functionName === "requestRedeem" && !tx.isSettled
+            ? "waiting_settlement"
+            : tx.functionName === "requestRedeem" && tx.isSettled
+            ? "completed"
+            : "unknown";
 
-      const amount = Number(formatUnits(tx.args[0], 18));
-      const value = amount * wldConversionRate;
-      return {
-        id: index.toString(),
-        amount: `${amount.toString()} WLD`,
-        status: functStatus,
-        txHash: tx.hash,
-        txHashShort: tx.hash.slice(0, 6) + "..." + tx.hash.slice(-4),
-        type: functType,
-        value: `+$${value.toString()}`,
-        timestamp: tx.timestamp ? formatTimestamp(Number(tx.timestamp)) : "",
-        rawTs: tx.timestamp ? Number(tx.timestamp) : 0,
-      };
-    });
+        const amount = Number(formatUnits(tx.args[0], 18));
+        const value = amount * wldConversionRate;
+        return {
+          id: index.toString(),
+          amount: `${amount.toString()} WLD`,
+          status: functStatus,
+          txHash: tx.hash,
+          txHashShort: tx.hash.slice(0, 6) + "..." + tx.hash.slice(-4),
+          type: functType,
+          value: `+$${value.toString()}`,
+          timestamp: tx.timestamp ? formatTimestamp(Number(tx.timestamp)) : "",
+          rawTs: tx.timestamp ? Number(tx.timestamp) : 0,
+        };
+      });
+    } catch {
+      return [];
+    }
   };
 
   const getVaultDataDirectly = async (): Promise<VaultDataResponse> => {

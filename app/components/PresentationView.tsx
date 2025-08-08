@@ -10,7 +10,10 @@ export default function PresentationView() {
   const { setView } = useView();
 
   useEffect(() => {
-    setView("vault");
+    // Only set view if we're not on the root path
+    if (window.location.pathname !== "/") {
+      setView("smartAccount");
+    }
   }, [setView]);
 
   return (

@@ -87,7 +87,12 @@ export function useVaultData(wallet: string) {
         return await getVaultDataDirectly();
       }
     },
-    enabled: typeof wallet === "string" && wallet.length > 0,
+    enabled:
+      typeof wallet === "string" &&
+      wallet.length > 0 &&
+      wallet.trim() !== "" &&
+      wallet.startsWith("0x") &&
+      localStorage.getItem("disconnect_requested") !== "true", // Don't poll if disconnect was requested
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchInterval: 5000, // Poll every 5 seconds
     refetchIntervalInBackground: true,

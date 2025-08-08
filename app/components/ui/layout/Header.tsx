@@ -1,5 +1,7 @@
 import { useTheme } from "@/context/ThemeContext";
+import { useAppKitAccount } from "@reown/appkit/react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useDisconnect } from "wagmi";
 import LedIcon from "../../icons/LedIcon";
 import MoonIcon from "../../icons/MoonIcon";
@@ -7,13 +9,43 @@ import SunIcon from "../../icons/SunIcon";
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
+  const { address } = useAppKitAccount();
   const { disconnect } = useDisconnect();
+  const router = useRouter();
 
   const handleDisconnect = async () => {
     try {
-      disconnect();
+      if (address) {
+        // Set a flag to prevent auto-reconnection
+        localStorage.setItem("disconnect_requested", "true");
+
+        // Clear all connection data
+        localStorage.removeItem("wagmi.connected");
+        localStorage.removeItem("wagmi.account");
+        localStorage.removeItem("wagmi.chainId");
+        localStorage.removeItem("wagmi.wallet");
+
+        // Disconnect from wagmi
+        disconnect();
+
+        // Small delay to ensure disconnect completes
+        setTimeout(() => {
+          // Route to root to reset the app state
+          router.push("/");
+          // Clear the disconnect flag after navigation
+          setTimeout(() => {
+            localStorage.removeItem("disconnect_requested");
+          }, 1000);
+        }, 100);
+      }
     } catch (error) {
       console.error("Error disconnecting wallet:", error);
+      // Fallback: clear storage and route to root
+      localStorage.removeItem("wagmi.connected");
+      localStorage.removeItem("wagmi.account");
+      localStorage.removeItem("wagmi.chainId");
+      localStorage.removeItem("wagmi.wallet");
+      router.push("/");
     }
   };
 

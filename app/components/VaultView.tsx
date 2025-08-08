@@ -76,8 +76,7 @@ export default function VaultView() {
     SHARE_TOKEN_SYMB: shareTokenSymb,
   } = getEnvVars(getTypedChainId(Number(network.chainId)));
 
-  const { getBalanceOf, getSuppplyBalanceFromSafe, getBalanceFromSafe } =
-    useBalanceOf();
+  const { getSuppplyBalanceFromSafe, getBalanceFromSafe } = useBalanceOf();
   const [walletBalance, setWalletBalance] = useState<string>("");
 
   const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
@@ -193,12 +192,12 @@ export default function VaultView() {
       }
     };
 
-    if (address) {
+    if (address && !isLoading && address !== "") {
       fetchUnderlyingBalance();
     } else {
       setWalletBalance("");
     }
-  }, [getSuppplyBalanceFromSafe, address]);
+  }, [getSuppplyBalanceFromSafe, address, isLoading]);
 
   useEffect(() => {
     const fetchSharesReadyToWithdraw = async () => {
@@ -211,12 +210,12 @@ export default function VaultView() {
       }
     };
 
-    if (address) {
+    if (address && address !== "") {
       fetchSharesReadyToWithdraw();
     } else {
       setSharesReadyToWithdraw("");
     }
-  }, [getBalanceOf, address]);
+  }, [getBalanceFromSafe, address]);
 
   useEffect(() => {
     const actions = createActions(["DEPOSIT", "WITHDRAW"], {

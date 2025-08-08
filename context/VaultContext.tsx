@@ -30,22 +30,32 @@ export function VaultProvider({ children }: VaultProviderProps) {
   const { safeAddress } = useSafeLinkedAccountContext();
 
   const [vault, setVault] = useState<DataPresenter | null>(null);
-  const { data, isLoading } = useVaultData(safeAddress ?? "");
+
+  // Check if we have valid addresses
+  const hasValidAddresses =
+    address &&
+    safeAddress &&
+    safeAddress.length > 0 &&
+    safeAddress.startsWith("0x");
+
+  // Only call useVaultData when we have valid addresses
+  const vaultDataQuery = useVaultData(hasValidAddresses ? safeAddress : "");
+  const { data, isLoading } = vaultDataQuery;
 
   useEffect(() => {
-    if (isLoading || !address) {
+    if (!hasValidAddresses || isLoading || !address) {
       setVault(null);
     } else if (data && address) {
       setVault(DataWrangler({ data }));
     }
-  }, [isLoading, data, address]);
+  }, [isLoading, data, address, hasValidAddresses]);
 
   return (
     <VaultContext.Provider
       value={{
         vault,
         setVault,
-        isLoading: address ? isLoading : false,
+        isLoading: hasValidAddresses ? isLoading : false,
       }}
     >
       {children}

@@ -86,11 +86,16 @@ export default function SmartAccountView() {
 
   useEffect(() => {
     const retrieveNativeBalance = async () => {
-      const nativeBalance = await getNativeBalance();
-      setWalletNativeBalance(nativeBalance);
+      try {
+        const nativeBalance = await getNativeBalance();
+        setWalletNativeBalance(nativeBalance);
+      } catch (err) {
+        console.warn("Failed to fetch native balance:", err);
+        setWalletNativeBalance("");
+      }
     };
 
-    if (!isLoading && vaultData) {
+    if (!isLoading && vaultData && address && address !== "") {
       setViewLoaded();
       if (isUnderlyingWrapNative) {
         retrieveNativeBalance();
@@ -102,6 +107,7 @@ export default function SmartAccountView() {
     setViewLoaded,
     isUnderlyingWrapNative,
     getNativeBalance,
+    address,
   ]);
 
   const handleOperation = (op: SmartAccountActionKey) => {
@@ -260,12 +266,12 @@ export default function SmartAccountView() {
       }
     };
 
-    if (address) {
+    if (address && !isLoading && address !== "") {
       fetchUnderlyingBalance();
     } else {
       setWalletBalance("");
     }
-  }, [getUnderlyingBalanceOf, address]);
+  }, [getUnderlyingBalanceOf, address, isLoading]);
 
   useEffect(() => {
     const fetchSupplyReadyToWithdraw = async () => {
@@ -278,12 +284,12 @@ export default function SmartAccountView() {
       }
     };
 
-    if (safeAddress) {
+    if (safeAddress && !isLoading && safeAddress !== "") {
       fetchSupplyReadyToWithdraw();
     } else {
       setSupplyReadyToWithdraw("");
     }
-  }, [getSuppplyBalanceFromSafe, safeAddress]);
+  }, [getSuppplyBalanceFromSafe, safeAddress, isLoading]);
 
   useEffect(() => {
     let actions;

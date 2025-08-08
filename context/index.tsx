@@ -64,11 +64,19 @@ function WalletChangeHandler() {
       return;
     }
 
-    // Clear all queries before navigation
-    queryClient.clear();
+    // Check if disconnect was requested
+    const disconnectRequested = localStorage.getItem("disconnect_requested");
+    if (disconnectRequested === "true") {
+      return; // Don't trigger navigation if disconnect was requested
+    }
 
-    // Navigate to home page
-    router.push("/");
+    // Only clear queries and navigate if address actually changed
+    if (address) {
+      // Clear all queries before navigation
+      queryClient.clear();
+      // Navigate to home page
+      router.push("/");
+    }
   }, [address, isInitialMount, router, queryClient]);
 
   return null;

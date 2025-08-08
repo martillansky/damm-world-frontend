@@ -45,7 +45,18 @@ export async function getSignerAndContract(chainId: string) {
 
 export const getSigner = async (): Promise<Signer> => {
   const provider = getEthersProvider();
-  await provider.send("eth_requestAccounts", []); // request connection
+
+  // Only request accounts if not already connected
+  try {
+    const accounts = await provider.listAccounts();
+    if (accounts.length === 0) {
+      await provider.send("eth_requestAccounts", []); // request connection only if needed
+    }
+  } catch (error) {
+    console.warn("Error checking accounts:", error);
+    // Don't throw, let the caller handle connection issues
+  }
+
   return provider.getSigner();
 };
 

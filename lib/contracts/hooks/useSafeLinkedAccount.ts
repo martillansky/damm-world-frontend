@@ -33,6 +33,7 @@ import {
   getEthersProvider,
   getSignerAndContract,
 } from "../utils/utils";
+import { useSafeBalances } from "./useSafeBalances";
 
 interface SafeLinkedAccountState {
   safeAddress: string | null;
@@ -62,137 +63,140 @@ export function useSafeLinkedAccount() {
   const [safeSDK, setSafeSDK] = useState<Safe | null>(null);
   const [client, setClient] = useState<WalletClient | null>(null);
 
-  useEffect(() => {
-    const isSafeInitialized = async () => {
-      if (!address || !network.chainId || !safeSDK) return false;
+  // Use React Query for balance polling
+  const { data: balances } = useSafeBalances(state.safeAddress || undefined);
 
-      const isSameNetwork =
-        String(await safeSDK.getChainId()) === network.chainId;
+  const isSafeInitialized = async () => {
+    if (!address || !network.chainId || !safeSDK) return false;
 
-      const isSameSigner = await safeSDK.isOwner(address);
+    const isSameNetwork =
+      String(await safeSDK.getChainId()) === network.chainId;
 
-      return isSameSigner && isSameNetwork;
-    };
+    const isSameSigner = await safeSDK.isOwner(address);
 
-    const initializeSafe = async () => {
-      try {
-        setState((s) => ({ ...s, isLoading: true }));
+    return isSameSigner && isSameNetwork;
+  };
 
-        if (await isSafeInitialized()) {
-          setState((s) => ({ ...s, isLoading: false }));
-          return;
-        }
+  const initializeSafe = async (forceReinitialize = false) => {
+    try {
+      setState((s) => ({ ...s, isLoading: true }));
 
-        const saltNonce = getDeterministicSaltNonce(address!);
+      if (!forceReinitialize && (await isSafeInitialized())) {
+        setState((s) => ({ ...s, isLoading: false }));
+        return;
+      }
 
-        const predictedSafe: PredictedSafeProps = {
-          safeAccountConfig: {
-            owners: [address!],
-            threshold: 1,
-          },
-          safeDeploymentConfig: {
-            saltNonce: saltNonce,
-            safeVersion: "1.4.1",
-          },
-        };
+      const saltNonce = getDeterministicSaltNonce(address!);
 
-        if (!walletClient) {
-          throw new Error("Wallet client not available");
-        }
-        const safeProvider = walletClient.transport as Eip1193Provider;
+      const predictedSafe: PredictedSafeProps = {
+        safeAccountConfig: {
+          owners: [address!],
+          threshold: 1,
+        },
+        safeDeploymentConfig: {
+          saltNonce: saltNonce,
+          safeVersion: "1.4.1",
+        },
+      };
 
-        const client = createWalletClient({
-          account: parseAccount(address!),
-          chain,
-          transport: custom(safeProvider),
-        });
+      if (!walletClient) {
+        throw new Error("Wallet client not available");
+      }
+      const safeProvider = walletClient.transport as Eip1193Provider;
 
-        const contractNetworks = getContractNetworks({
-          version: "1.4.1",
-          released: true,
-          network: network.chainId!.toString(),
-        });
+      const client = createWalletClient({
+        account: parseAccount(address!),
+        chain,
+        transport: custom(safeProvider),
+      });
 
+      const contractNetworks = getContractNetworks({
+        version: "1.4.1",
+        released: true,
+        network: network.chainId!.toString(),
+      });
+
+      const safeConfig: SafeConfig = {
+        provider: client.transport,
+        signer: address,
+        predictedSafe,
+        contractNetworks: contractNetworks,
+        isL1SafeSingleton: true,
+      };
+
+      let sdk = await Safe.init(safeConfig);
+
+      const safeAddress = await sdk.getAddress();
+      console.log("SAFE ADDRESS", safeAddress);
+      const isDeployed = await sdk.isSafeDeployed();
+      console.log("IS DEPLOYED", isDeployed);
+      const contractVersion = sdk.getContractVersion();
+      console.log("CONTRACT VERSION", contractVersion);
+
+      if (isDeployed) {
         const safeConfig: SafeConfig = {
           provider: client.transport,
           signer: address,
-          predictedSafe,
+          safeAddress: safeAddress,
           contractNetworks: contractNetworks,
-          isL1SafeSingleton: true,
         };
-
-        let sdk = await Safe.init(safeConfig);
-
-        const safeAddress = await sdk.getAddress();
-        console.log("SAFE ADDRESS", safeAddress);
-        const isDeployed = await sdk.isSafeDeployed();
-        console.log("IS DEPLOYED", isDeployed);
-        const contractVersion = sdk.getContractVersion();
-        console.log("CONTRACT VERSION", contractVersion);
-
-        if (isDeployed) {
-          const safeConfig: SafeConfig = {
-            provider: client.transport,
-            signer: address,
-            safeAddress: safeAddress,
-            contractNetworks: contractNetworks,
-          };
-          sdk = await Safe.init(safeConfig);
-          sdk = await sdk.connect({
-            signer: address,
-            safeAddress: safeAddress,
-          });
-        }
-
-        setSafeSDK(sdk);
-
-        setClient(client);
-        const { underlyingToken, vault, tokenMetadata } =
-          await getSignerAndContract(chain.id.toString());
-        const [availableSupply, shares] = isDeployed
-          ? publicClient
-            ? await Promise.all([
-                publicClient?.readContract({
-                  address: underlyingToken.address as `0x${string}`,
-                  abi: underlyingToken.interface.fragments,
-                  functionName: "balanceOf",
-                  args: [safeAddress],
-                }) as unknown as bigint,
-                publicClient?.readContract({
-                  address: vault.address as `0x${string}`,
-                  abi: vault.interface.fragments,
-                  functionName: "balanceOf",
-                  args: [safeAddress],
-                }) as unknown as bigint,
-              ])
-            : await Promise.all([
-                underlyingToken.balanceOf(safeAddress),
-                vault.balanceOf(safeAddress),
-              ])
-          : [0, 0];
-        setState({
-          safeAddress,
-          isDeployed,
-          isLoading: false,
-          error: null,
-          availableSupply: formatUnits(availableSupply, tokenMetadata.decimals),
-          shares: formatUnits(shares, tokenMetadata.decimals),
-        });
-      } catch (error) {
-        console.log("ERROR INITIALIZING SAFE", error);
-        setSafeSDK(null);
-        setClient(null);
-        setState({
-          safeAddress: null,
-          isDeployed: false,
-          isLoading: false,
-          error: error as Error,
-          availableSupply: "0",
-          shares: "0",
+        sdk = await Safe.init(safeConfig);
+        sdk = await sdk.connect({
+          signer: address,
+          safeAddress: safeAddress,
         });
       }
-    };
 
+      setSafeSDK(sdk);
+
+      setClient(client);
+      const { underlyingToken, vault, tokenMetadata } =
+        await getSignerAndContract(chain.id.toString());
+      const [availableSupply, shares] = isDeployed
+        ? publicClient
+          ? await Promise.all([
+              publicClient?.readContract({
+                address: underlyingToken.address as `0x${string}`,
+                abi: underlyingToken.interface.fragments,
+                functionName: "balanceOf",
+                args: [safeAddress],
+              }) as unknown as bigint,
+              publicClient?.readContract({
+                address: vault.address as `0x${string}`,
+                abi: vault.interface.fragments,
+                functionName: "balanceOf",
+                args: [safeAddress],
+              }) as unknown as bigint,
+            ])
+          : await Promise.all([
+              underlyingToken.balanceOf(safeAddress),
+              vault.balanceOf(safeAddress),
+            ])
+        : [0, 0];
+      setState({
+        safeAddress,
+        isDeployed,
+        isLoading: false,
+        error: null,
+        availableSupply: formatUnits(availableSupply, tokenMetadata.decimals),
+        shares: formatUnits(shares, tokenMetadata.decimals),
+      });
+    } catch (error) {
+      console.log("ERROR INITIALIZING SAFE", error);
+      setSafeSDK(null);
+      setClient(null);
+      setState({
+        safeAddress: null,
+        isDeployed: false,
+        isLoading: false,
+        error: error as Error,
+        availableSupply: "0",
+        shares: "0",
+      });
+    }
+  };
+
+  useEffect(() => {
     if (address && network.chainId && walletClient) initializeSafe();
   }, [address, network.chainId, walletClient]);
 
@@ -220,8 +224,6 @@ export function useSafeLinkedAccount() {
 
     try {
       const txResponse = await executeSafeTransaction(txs);
-      // Refresh balances after successful transaction
-      await refreshBalances();
       return txResponse as unknown as TransactionResponse;
     } catch (error) {
       console.error("Error executing safe transaction:", error);
@@ -297,15 +299,13 @@ export function useSafeLinkedAccount() {
       data: tx.data as `0x${string}`,
       chain,
     });
-    setState((s) => ({ ...s, isDeployed: true }));
-
     // Wait for deployment and refresh balances
     const receipt = await client
       .extend(publicActions)
       .waitForTransactionReceipt({ hash: txHash });
 
-    // Refresh balances after deployment
-    await refreshBalances();
+    // Re-initialize SafeSDK after deployment
+    await initializeSafe(true);
 
     return {
       hash: txHash,
@@ -336,8 +336,6 @@ export function useSafeLinkedAccount() {
 
     try {
       const txResponse = await executeSafeTransaction(txs);
-      // Refresh balances after successful transaction
-      await refreshBalances();
       return txResponse as unknown as TransactionResponse;
     } catch (error) {
       console.error("Error executing safe transaction:", error);
@@ -345,63 +343,19 @@ export function useSafeLinkedAccount() {
     }
   };
 
-  const refreshBalances = async () => {
-    if (
-      !state.safeAddress ||
-      !state.isDeployed ||
-      !network.chainId ||
-      !publicClient
-    )
-      return;
-
-    try {
-      const { underlyingToken, vault, tokenMetadata } =
-        await getSignerAndContract(network.chainId.toString());
-
-      const [availableSupply, shares] = await Promise.all([
-        publicClient.readContract({
-          address: underlyingToken.address as `0x${string}`,
-          abi: underlyingToken.interface.fragments,
-          functionName: "balanceOf",
-          args: [state.safeAddress as `0x${string}`],
-        }),
-        publicClient.readContract({
-          address: vault.address as `0x${string}`,
-          abi: vault.interface.fragments,
-          functionName: "balanceOf",
-          args: [state.safeAddress as `0x${string}`],
-        }),
-      ]);
-
+  // Update state when balances change from React Query
+  useEffect(() => {
+    if (balances) {
       setState((prev) => ({
         ...prev,
-        availableSupply: formatUnits(
-          availableSupply as bigint,
-          tokenMetadata.decimals
-        ),
-        shares: formatUnits(shares as bigint, tokenMetadata.decimals),
+        availableSupply: balances.availableSupply,
+        shares: balances.shares,
       }));
-    } catch (error) {
-      console.error("Error refreshing balances:", error);
     }
-  };
-
-  // Refresh balances periodically and after transactions
-  useEffect(() => {
-    if (!state.isDeployed || !state.safeAddress) return;
-
-    // Initial refresh
-    refreshBalances();
-
-    // Set up interval for periodic refresh (every 10 seconds)
-    const interval = setInterval(refreshBalances, 10000);
-
-    return () => clearInterval(interval);
-  }, [state.isDeployed, state.safeAddress, network.chainId]);
+  }, [balances]);
 
   return {
     ...state,
-    refreshBalances,
     executeFundSmartAccountWorkflow,
     deploySafeAsSpender,
     executeSafeTransaction,
