@@ -15,6 +15,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
+import ChartIcon from "./icons/ChartIcon";
+import OverviewIcon from "./icons/OverviewIcon";
 import { BaseActionKey, createActions } from "./ui/common/Action";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
@@ -27,6 +29,7 @@ import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
 import Select from "./ui/common/Select";
+import ViewToggle from "./ui/common/ViewToggle";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
@@ -48,6 +51,20 @@ export default function VaultView() {
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
   const [filter, setFilter] = useState("all");
+  const [activeView, setActiveView] = useState("overview");
+
+  const viewOptions = [
+    {
+      id: "overview",
+      label: "Overview",
+      icon: <OverviewIcon />,
+    },
+    {
+      id: "chart",
+      label: "Performance",
+      icon: <ChartIcon />,
+    },
+  ];
 
   type VaultActionKey = BaseActionKey & ("DEPOSIT" | "WITHDRAW");
   const [operation, setOperation] = useState<VaultActionKey | null>(null);
@@ -234,56 +251,69 @@ export default function VaultView() {
   return (
     vaultData && (
       <>
-        <Card
-          title="Fund Overview"
-          subtitle="Performance metrics for this investment fund"
-          variant="small"
-        >
-          <CardRow
-            left="TVL"
-            right={vaultData.tvl}
-            secondaryRight={vaultData.tvlChange}
-          />
-          <CardRow
-            left="APY (12h avg)"
-            tooltip="Average annual percentage rate based on the last 12 hours of performance."
-            highlightedRight
-            right={vaultData.apr}
-            secondaryRight={vaultData.aprChange}
-          />
-          {/* <CardRow
-            left="Value Gained"
-            highlightedRight
-            right={vaultData.valueGained}
-            secondaryRight={vaultData.valueGainedUSD}
-          /> */}
-          <CardRow
-            left="Your Position"
-            right={vaultData.position}
-            secondaryRight={vaultData.positionUSD}
-          />
-        </Card>
+        <div className="space-y-4">
+          {/* Overview View */}
+          {activeView === "overview" && (
+            <Card
+              title="Fund Overview"
+              subtitle="Performance metrics for this investment fund"
+              variant="small"
+            >
+              <CardRow
+                left="TVL"
+                right={vaultData.tvl}
+                secondaryRight={vaultData.tvlChange}
+              />
+              <CardRow
+                left="APY (12h avg)"
+                tooltip="Average annual percentage rate based on the last 12 hours of performance."
+                highlightedRight
+                right={vaultData.apr}
+                secondaryRight={vaultData.aprChange}
+              />
+              <CardRow
+                left="Your Position"
+                right={vaultData.position}
+                secondaryRight={vaultData.positionUSD}
+              />
+            </Card>
+          )}
 
-        <ChartCard
-          title="Fund Performance"
-          subtitle="Historical performance metrics and trends"
-          selector={
-            <Select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              options={["all", "WLD/USDC", "WLD/DAI", "WLD/USDT"]}
-              displayLabels={{
-                all: "All Funds",
-                "WLD/USDC": "WLD/USDC",
-                "WLD/DAI": "WLD/DAI",
-                "WLD/USDT": "WLD/USDT",
-              }}
-              size="small"
-            />
-          }
-        >
-          <StackedAreaChart vaultName={filter} />
-        </ChartCard>
+          {/* Chart View */}
+          {activeView === "chart" && (
+            <ChartCard
+              title="Fund Performance"
+              subtitle="Historical performance metrics and trends"
+              variant="small"
+              selector={
+                <Select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  options={["all", "WLD/USDC", "WLD/DAI", "WLD/USDT"]}
+                  displayLabels={{
+                    all: "All Funds",
+                    "WLD/USDC": "WLD/USDC",
+                    "WLD/DAI": "WLD/DAI",
+                    "WLD/USDT": "WLD/USDT",
+                  }}
+                  size="small"
+                />
+              }
+            >
+              <StackedAreaChart vaultName={filter} />
+            </ChartCard>
+          )}
+        </div>
+
+        {/* Fixed View Toggle */}
+        <div className="fixed bottom-36 left-1/2 transform -translate-x-1/2">
+          <ViewToggle
+            views={viewOptions}
+            activeView={activeView}
+            onViewChange={setActiveView}
+            className="scale-75"
+          />
+        </div>
 
         {/* Dialog */}
         <Dialog

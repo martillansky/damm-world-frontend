@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import ViewToggle from "./ViewToggle";
 
 interface ChartCardProps {
   title: string;
@@ -15,6 +16,34 @@ const ChartCard = ({
   variant = "large",
   selector,
 }: ChartCardProps) => {
+  const [activeView, setActiveView] = useState("24h");
+  const viewOptions = [
+    {
+      id: "24h",
+      label: "24h",
+    },
+    {
+      id: "7d",
+      label: "7d",
+    },
+    {
+      id: "1m",
+      label: "1m",
+    },
+    {
+      id: "6m",
+      label: "6m",
+    },
+    {
+      id: "1y",
+      label: "1y",
+    },
+    {
+      id: "all",
+      label: "All",
+    },
+  ];
+
   const sectionCore =
     "card bg-gradient-to-br from-gray-100 to-gray-200 dark:bg-gradient-to-br dark:from-zinc-900 dark:to-zinc-800 border-0 dark:border dark:border-zinc-800";
   const sectionLarge = `${sectionCore} p-6`;
@@ -48,6 +77,15 @@ const ChartCard = ({
         >
           <div className="w-full h-96">{children}</div>
         </div>
+      </div>
+      {/* Fixed View Toggle */}
+      <div className="fixed justify-center">
+        <ViewToggle
+          views={viewOptions}
+          activeView={activeView}
+          onViewChange={setActiveView}
+          className="scale-75"
+        />
       </div>
     </section>
   );
