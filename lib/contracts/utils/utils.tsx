@@ -8,11 +8,8 @@ import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { TransactionResponse } from "@ethersproject/providers";
 import { ethers, Signer } from "ethers";
+import { keccak256, toHex } from "viem";
 import { getTokenMetadata, TokenMetadata } from "./TokenMetadata";
-
-export function toBytes(hex: string): string {
-  return hex.startsWith("0x") ? hex : `0x${hex}`;
-}
 
 export async function getSignerAndContract(chainId: string) {
   const signer: Signer = await getSigner();
@@ -73,4 +70,16 @@ export function getEthersProvider(): ethers.providers.Web3Provider {
   } else {
     throw new Error("No injected provider found (e.g., MetaMask).");
   }
+}
+
+/* export function getDeterministicSaltNonce(address: string): `0x${string}` {
+  const hash = keccak256(toHex(address)); // returns a 32-byte hex string
+  return hash as `0x${string}`;
+} */
+
+export function getDeterministicSaltNonce(address: string): `0x${string}` {
+  const { LINKED_SAFE_VERSION } = getEnvVars();
+  const input = toHex(`${address.toLowerCase()}-${LINKED_SAFE_VERSION}`);
+  const hash = keccak256(input); // returns 32-byte hex string
+  return hash as `0x${string}`;
 }

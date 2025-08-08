@@ -75,3 +75,16 @@ export async function unwrapWETH(chainId: string, amountInWETH: string) {
   await tx.wait();
   console.log(`Unwrapped ${amountInWETH} WETH into ETH.`);
 }
+
+export async function getWrapNativeETHTx(chainId: string): Promise<Call> {
+  const { UNDERLYING_TOKEN } = getEnvVars(getTypedChainId(Number(chainId)));
+  const { signer } = await getSignerAndContract(chainId);
+
+  const weth = new ethers.Contract(UNDERLYING_TOKEN, WETH_ABI, signer);
+
+  return {
+    target: weth.address,
+    allowFailure: false,
+    callData: weth.interface.encodeFunctionData("deposit"),
+  };
+}

@@ -1,6 +1,5 @@
-import { useGetVaultDataDirectly } from "@/lib/data";
-
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
+import { useGetVaultDataDirectly } from "@/lib/data";
 import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { useAppKitNetwork } from "@reown/appkit/react";
@@ -18,7 +17,7 @@ import {
 } from "../utils/IntegratedPositionConverter";
 
 export function useVaultData(wallet: string) {
-  const { getUnderlyingTokenDecimals, getBalanceOf } = useBalanceOf();
+  const { getUnderlyingTokenDecimals, getBalanceFromSafe } = useBalanceOf();
   const { getVaultDataDirectly } = useGetVaultDataDirectly();
   const network = useAppKitNetwork();
 
@@ -55,7 +54,9 @@ export function useVaultData(wallet: string) {
         const integratedPositionData: IntegratedDataResponse =
           convertIntegratedPosition(
             vaultData,
-            Number(await getBalanceOf()),
+            //Number(await getBalanceOf()),
+            Number(await getBalanceFromSafe()),
+            //Number(shares),
             underlyingTokenDecimals
           );
 

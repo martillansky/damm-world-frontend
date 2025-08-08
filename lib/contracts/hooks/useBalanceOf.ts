@@ -1,11 +1,14 @@
+import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { formatUnits } from "ethers/lib/utils";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { getEthersProvider, getSignerAndContract } from "../utils/utils";
 
 export function useBalanceOf() {
   const { address } = useAccount();
   const network = useAppKitNetwork();
+  const { safeAddress } = useSafeLinkedAccountContext();
+  const publicClient = usePublicClient();
 
   const getUnderlyingTokenDecimals = async () => {
     const { tokenMetadata } = await getSignerAndContract(
@@ -22,35 +25,74 @@ export function useBalanceOf() {
   };
 
   const getUnderlyingBalanceOf = async () => {
-    console.log("network: ", network);
     if (!address) throw new Error("No address found");
 
     const { underlyingToken, tokenMetadata } = await getSignerAndContract(
       network.chainId?.toString() ?? ""
     );
 
-    console.log("underlyingToken: ", underlyingToken.address);
-    console.log("NATIVE: ", await getNativeBalance());
-
     // These are the underlying tokens user has on his wallet
-    const balance = await underlyingToken.balanceOf(address);
+    const balance = await publicClient?.readContract({
+      address: underlyingToken.address,
+      abi: underlyingToken.interface.fragments,
+      functionName: "balanceOf",
+      args: [address],
+    });
 
-    console.log("balance: ", balance);
-
-    return formatUnits(balance, tokenMetadata.decimals);
+    return formatUnits(balance as bigint, tokenMetadata.decimals);
   };
 
   const getBalanceOf = async () => {
     if (!address) throw new Error("No address found");
 
-    const { vault } = await getSignerAndContract(
+    const { vault, tokenMetadata } = await getSignerAndContract(
       network.chainId?.toString() ?? ""
     );
 
     // These are the shares ready to be withdrawn (user holds them on his wallet)
-    const balance = await vault.balanceOf(address);
+    const balance = await publicClient?.readContract({
+      address: vault.address,
+      abi: vault.interface.fragments,
+      functionName: "balanceOf",
+      args: [address],
+    });
 
-    return formatUnits(balance, 18);
+    return formatUnits(balance as bigint, tokenMetadata.decimals);
+  };
+
+  const getBalanceFromSafe = async () => {
+    if (!safeAddress) throw new Error("No address found");
+
+    const { vault, tokenMetadata } = await getSignerAndContract(
+      network.chainId?.toString() ?? ""
+    );
+
+    const balance = await publicClient?.readContract({
+      address: vault.address,
+      abi: vault.interface.fragments,
+      functionName: "balanceOf",
+      args: [safeAddress],
+    });
+
+    return formatUnits(balance as bigint, tokenMetadata.decimals);
+  };
+
+  const getSuppplyBalanceFromSafe = async () => {
+    if (!address || !safeAddress) throw new Error("No address found");
+
+    const { underlyingToken, tokenMetadata } = await getSignerAndContract(
+      network.chainId?.toString() ?? ""
+    );
+
+    // Supply available to withdraw from safe
+    const balance = await publicClient?.readContract({
+      address: underlyingToken.address,
+      abi: underlyingToken.interface.fragments,
+      functionName: "balanceOf",
+      args: [safeAddress],
+    });
+
+    return formatUnits(balance as bigint, tokenMetadata.decimals);
   };
 
   return {
@@ -58,5 +100,7 @@ export function useBalanceOf() {
     getNativeBalance,
     getBalanceOf,
     getUnderlyingTokenDecimals,
+    getSuppplyBalanceFromSafe,
+    getBalanceFromSafe,
   };
 }

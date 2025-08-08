@@ -15,14 +15,24 @@
     "@heroicons/react": "^2.2.0",
     "@reown/appkit": "^1.7.2",
     "@reown/appkit-adapter-wagmi": "^1.7.2",
+    "@safe-global/protocol-kit": "^6.1.0",
+    "@safe-global/safe-core-sdk-types": "^5.1.0",
+    "@safe-global/safe-ethers-lib": "^1.9.4",
+    "@safe-global/types-kit": "^3.0.0",
     "@tanstack/react-query": "^5.72.1",
+    "@uniswap/permit2-sdk": "^1.3.1",
     "@worldcoin/minikit-js": "^1.9.5",
+    "@visx/curve": "1.0.0",
+    "@visx/responsive": "latest",
+    "@visx/xychart": "latest",
+    "@react-spring/web": "^9.4.5",
     "autoprefixer": "^10.4.14",
     "ethers": "5",
     "next": "15.3.2",
     "postcss": "^8.4.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "viem": "^2.33.0",
     "wagmi": "^2.14.16"
   },
   "devDependencies": {
@@ -36,5 +46,10 @@
     "tailwindcss": "^3.3.2",
     "typechain": "^8.3.2",
     "typescript": "^5"
+  },
+  "resolutions": {
+    "@noble/hashes": "^1.8.0",
+    "@noble/curves": "^1.9.4",
+    "viem": "^2.33.0"
   }
 }

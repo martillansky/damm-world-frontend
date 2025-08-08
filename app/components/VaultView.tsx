@@ -1,5 +1,7 @@
 import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
+import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
+import { useTransaction } from "@/context/TransactionContext";
 import { useVault } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
@@ -12,8 +14,13 @@ import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
+import ChartIcon from "./icons/ChartIcon";
+import OverviewIcon from "./icons/OverviewIcon";
+import { BaseActionKey, createActions } from "./ui/common/Action";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
+import ChartCard from "./ui/common/ChartCard";
 import Dialog, {
   DialogActionButtons,
   DialogContents,
@@ -22,11 +29,12 @@ import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
 import Select from "./ui/common/Select";
-import Toast, { ToastType } from "./ui/common/Toast";
+import ViewToggle from "./ui/common/ViewToggle";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function VaultView() {
+  const { safeAddress } = useSafeLinkedAccountContext();
   const { address } = useParams();
   const network = useAppKitNetwork();
   const { vault, isLoading } = useVault();
@@ -36,119 +44,148 @@ export default function VaultView() {
     () => vault?.vaultData,
     [vault?.vaultData]
   );
+  const { showTransaction, updateTransactionStatus, hideTransaction } =
+    useTransaction();
   const { submitRequestDeposit } = useDeposit();
   const { submitRequestWithdraw } = useWithdraw();
-
   const { setActions } = useActionSlot();
   const [showDialog, setShowDialog] = useState(false);
-  const [operation, setOperation] = useState<"deposit" | "withdraw" | null>(
-    null
-  );
+  const [filter, setFilter] = useState("all");
+  const [activeView, setActiveView] = useState("overview");
+
+  const viewOptions = [
+    {
+      id: "overview",
+      label: "Overview",
+      icon: <OverviewIcon />,
+    },
+    {
+      id: "chart",
+      label: "Performance",
+      icon: <ChartIcon />,
+    },
+  ];
+
+  type VaultActionKey = BaseActionKey & ("DEPOSIT" | "WITHDRAW");
+  const [operation, setOperation] = useState<VaultActionKey | null>(null);
+
   const [amount, setAmount] = useState("");
 
   const {
-    IS_UNDERLYING_WRAP_NATIVE: isUnderlyingWrapNative,
-    UNDERLYING_NATIVE_TOKEN_SYMB: underlyingNativeTokenSymb,
     UNDERLYING_TOKEN_SYMB: underlyingTokenSymb,
     SHARE_TOKEN_SYMB: shareTokenSymb,
   } = getEnvVars(getTypedChainId(Number(network.chainId)));
 
-  const [selectedToken, setSelectedToken] =
-    useState<string>(underlyingTokenSymb);
-  const { getBalanceOf, getNativeBalance, getUnderlyingBalanceOf } =
+  const { getBalanceOf, getSuppplyBalanceFromSafe, getBalanceFromSafe } =
     useBalanceOf();
   const [walletBalance, setWalletBalance] = useState<string>("");
-  const [walletNativeBalance, setWalletNativeBalance] = useState<string>("");
+
   const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
     useState<string>("");
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState<ToastType>("info");
 
   useEffect(() => {
-    const retrieveNativeBalance = async () => {
-      const nativeBalance = await getNativeBalance();
-      setWalletNativeBalance(nativeBalance);
-    };
-
     if (!isLoading && vaultData) {
       setViewLoaded();
-      if (isUnderlyingWrapNative) {
-        retrieveNativeBalance();
-      }
     }
-  }, [
-    isLoading,
-    vaultData,
-    setViewLoaded,
-    isUnderlyingWrapNative,
-    getNativeBalance,
-  ]);
+  }, [isLoading, vaultData, setViewLoaded]);
 
-  const handleOperation = (op: "deposit" | "withdraw") => {
+  const handleOperation = (op: VaultActionKey) => {
     setOperation(op);
     setShowDialog(true);
   };
 
   const handleSubmit = async () => {
     setShowDialog(false);
-    if (operation === "deposit") {
+    if (operation === "DEPOSIT") {
       try {
-        const wrapNativeToken =
-          isUnderlyingWrapNative && selectedToken !== underlyingTokenSymb;
-        const tx = await submitRequestDeposit(amount, wrapNativeToken);
-        setToastMessage("Deposit request submitted!");
-        setToastType("info");
-        setShowToast(true);
+        // Show the overlay
+        showTransaction(
+          "Processing Deposit",
+          "Please wait while we process your deposit request..."
+        );
 
+        // Execute transaction
+        const tx = await submitRequestDeposit(amount);
+
+        // Update status to pending
+        updateTransactionStatus(
+          "pending",
+          "Transaction submitted! Waiting for confirmation..."
+        );
+
+        // Wait for confirmation
         await tx.wait();
-        setToastMessage("Deposit request confirmed!");
-        setToastType("success");
-        setShowToast(true);
+
+        // Update to success
+        updateTransactionStatus("success", "Deposit completed successfully!");
+
+        // Hide after 2 seconds
+        setTimeout(hideTransaction, 2000);
       } catch (error) {
         console.error("Error in deposit process:", error);
-        setToastMessage("Error submitting deposit request");
-        setToastType("error");
-        setShowToast(true);
+        // Update to error
+        updateTransactionStatus(
+          "error",
+          "Transaction failed. Please try again."
+        );
+
+        // Hide after 3 seconds
+        setTimeout(hideTransaction, 3000);
       }
     } else {
       try {
-        const tx = await submitRequestWithdraw(amount);
-        setToastMessage("Withdraw request submitted!");
-        setToastType("info");
-        setShowToast(true);
+        // Show the overlay
+        showTransaction(
+          "Processing Withdraw Request",
+          "Please wait while we process your withdraw request..."
+        );
 
+        // Execute transaction
+        const tx = await submitRequestWithdraw(amount);
+
+        // Update status to pending
+        updateTransactionStatus(
+          "pending",
+          "Transaction submitted! Waiting for confirmation..."
+        );
+
+        // Wait for confirmation
         await tx.wait();
-        setToastMessage("Withdraw request confirmed!");
-        setToastType("success");
-        setShowToast(true);
+
+        // Update to success
+        updateTransactionStatus(
+          "success",
+          "Withdraw request completed successfully!"
+        );
+
+        // Hide after 2 seconds
+        setTimeout(hideTransaction, 2000);
       } catch (error) {
-        console.error("Error in withdraw process:", error);
-        setToastMessage("Error submitting withdraw request");
-        setToastType("error");
-        setShowToast(true);
+        console.error("Error in withdraw request process:", error);
+        // Update to error
+        updateTransactionStatus(
+          "error",
+          "Transaction failed. Please try again."
+        );
+
+        // Hide after 3 seconds
+        setTimeout(hideTransaction, 3000);
       }
     }
     setAmount("");
     setOperation(null);
     // Invalidate and refetch vault data
-    queryClient.invalidateQueries({ queryKey: ["vaultData", address] });
+    queryClient.invalidateQueries({ queryKey: ["vaultData", safeAddress] });
   };
 
   const handleMaxClick = () => {
-    setAmount(
-      operation === "deposit"
-        ? selectedToken === underlyingTokenSymb
-          ? walletBalance
-          : walletNativeBalance
-        : sharesReadyToWithdraw
-    );
+    setAmount(operation === "DEPOSIT" ? walletBalance : sharesReadyToWithdraw);
   };
 
   useEffect(() => {
     const fetchUnderlyingBalance = async () => {
       try {
-        const balance = await getUnderlyingBalanceOf();
+        const balance = await getSuppplyBalanceFromSafe();
         setWalletBalance(balance);
       } catch (err) {
         console.warn("Failed to fetch balance:", err);
@@ -161,12 +198,12 @@ export default function VaultView() {
     } else {
       setWalletBalance("");
     }
-  }, [getUnderlyingBalanceOf, address]);
+  }, [getSuppplyBalanceFromSafe, address]);
 
   useEffect(() => {
     const fetchSharesReadyToWithdraw = async () => {
       try {
-        const balance = await getBalanceOf();
+        const balance = await getBalanceFromSafe();
         setSharesReadyToWithdraw(balance);
       } catch (err) {
         console.warn("Failed to fetch balance:", err);
@@ -182,125 +219,155 @@ export default function VaultView() {
   }, [getBalanceOf, address]);
 
   useEffect(() => {
+    const actions = createActions(["DEPOSIT", "WITHDRAW"], {
+      DEPOSIT: {
+        label: "Invest",
+        icon: <ArrowUpIcon />,
+        onClick: () => handleOperation("DEPOSIT"),
+      },
+      WITHDRAW: {
+        label: "Init Withdraw",
+        icon: <ArrowDownIcon />,
+        onClick: () => handleOperation("WITHDRAW"),
+      },
+    });
     setActions(
       <>
-        <Button onClick={() => handleOperation("deposit")}>
-          <ArrowUpIcon />
-          <span>Deposit</span>
-        </Button>
-        <Button onClick={() => handleOperation("withdraw")}>
-          <ArrowDownIcon />
-          <span>Withdraw</span>
-        </Button>
+        {actions.map((action) => (
+          <Button key={action.label} onClick={action.onClick}>
+            {action.icon}
+            <span>{action.label}</span>
+          </Button>
+        ))}
       </>
     );
     return () => setActions(null); // Clean up when component unmounts
   }, [setActions]);
 
   if (isLoading || isChangingView || !vaultData) {
-    return <LoadingComponent text="Loading vault data..." />;
+    return <LoadingComponent text="Loading fund data..." />;
   }
 
   return (
     vaultData && (
       <>
-        <Card
-          title="Vault Overview"
-          subtitle="Performance metrics for this liquidity vault"
-          variant="large"
-        >
-          <CardRow
-            left="TVL"
-            right={vaultData.tvl}
-            secondaryRight={vaultData.tvlChange}
+        <div className="space-y-4">
+          {/* Overview View */}
+          {activeView === "overview" && (
+            <Card
+              title="Fund Overview"
+              subtitle="Performance metrics for this investment fund"
+              variant="small"
+            >
+              <CardRow
+                left="TVL"
+                right={vaultData.tvl}
+                secondaryRight={vaultData.tvlChange}
+              />
+              <CardRow
+                left="APY (12h avg)"
+                tooltip="Average annual percentage rate based on the last 12 hours of performance."
+                highlightedRight
+                right={vaultData.apr}
+                secondaryRight={vaultData.aprChange}
+              />
+              <CardRow
+                left="Your Position"
+                right={vaultData.position}
+                secondaryRight={vaultData.positionUSD}
+              />
+            </Card>
+          )}
+
+          {/* Chart View */}
+          {activeView === "chart" && (
+            <ChartCard
+              title="Fund Performance"
+              subtitle="Historical performance metrics and trends"
+              variant="small"
+              selector={
+                <Select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  options={["all", "WLD/USDC", "WLD/DAI", "WLD/USDT"]}
+                  displayLabels={{
+                    all: "All Funds",
+                    "WLD/USDC": "WLD/USDC",
+                    "WLD/DAI": "WLD/DAI",
+                    "WLD/USDT": "WLD/USDT",
+                  }}
+                  size="small"
+                />
+              }
+            >
+              <StackedAreaChart vaultName={filter} />
+            </ChartCard>
+          )}
+        </div>
+
+        {/* Fixed View Toggle */}
+        <div className="fixed bottom-36 left-1/2 transform -translate-x-1/2">
+          <ViewToggle
+            views={viewOptions}
+            activeView={activeView}
+            onViewChange={setActiveView}
+            className="scale-75"
           />
-          <CardRow
-            left="APY (12h avg)"
-            tooltip="Average annual percentage rate based on the last 12 hours of performance."
-            highlightedRight
-            right={vaultData.apr}
-            secondaryRight={vaultData.aprChange}
-          />
-          <CardRow
-            left="Value Gained"
-            highlightedRight
-            right={vaultData.valueGained}
-            secondaryRight={vaultData.valueGainedUSD}
-          />
-          <CardRow
-            left="Your Position"
-            right={vaultData.position}
-            secondaryRight={vaultData.positionUSD}
-          />
-        </Card>
+        </div>
 
         {/* Dialog */}
         <Dialog
           open={showDialog}
           onClose={() => setShowDialog(false)}
           title={
-            operation === "deposit"
-              ? `Deposit ${underlyingTokenSymb}`
-              : `Withdraw ${underlyingTokenSymb}`
+            operation === "DEPOSIT"
+              ? `Invest ${underlyingTokenSymb}`
+              : `Init ${underlyingTokenSymb} Withdraw`
           }
         >
           <DialogContents>
-            {operation === "deposit" &&
-              !!isUnderlyingWrapNative &&
-              isUnderlyingWrapNative && (
-                <Select
-                  label="Token"
-                  options={[underlyingTokenSymb, underlyingNativeTokenSymb]}
-                  value={selectedToken}
-                  onChange={(e) => setSelectedToken(e.target.value)}
-                />
-              )}
             <Input
               type="number"
-              label={`Amount (${
-                operation === "deposit" ? selectedToken : underlyingTokenSymb
-              })`}
+              label={`Amount (${underlyingTokenSymb})`}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               handleMaxClick={handleMaxClick}
               labelMax={
                 <>
                   Max:{" "}
-                  {operation === "deposit"
-                    ? selectedToken === underlyingTokenSymb
-                      ? walletBalance + " " + underlyingTokenSymb
-                      : walletNativeBalance + " " + underlyingNativeTokenSymb
+                  {operation === "DEPOSIT"
+                    ? walletBalance + " " + underlyingTokenSymb
                     : sharesReadyToWithdraw + " " + underlyingTokenSymb}
                 </>
               }
               placeholder="0.0"
             />
 
-            {operation === "deposit" && (
-              <ObservationCard title="Deposit Process">
-                This is a two-step process:
+            {operation === "DEPOSIT" && (
+              <ObservationCard title="Investing Process">
+                Investing in a DAMM fund implies:
                 <br />
-                1. Your {underlyingTokenSymb} will be deposited into the vault
+                1. Depositing your {underlyingTokenSymb} into the fund.
                 <br />
-                2. You&apos;ll receive {shareTokenSymb} shares
+                2. You&apos;ll receive {shareTokenSymb} shares in your account.
               </ObservationCard>
             )}
 
-            {operation === "withdraw" && (
+            {operation === "WITHDRAW" && (
               <>
                 <ObservationCard title="Withdrawal Process">
-                  This is a two-step process:
+                  Due to security reasons, our managers will:
                   <br />
-                  1. Your {shareTokenSymb} shares will be burned
+                  1. Verify and approve this request for authenticity.
                   <br />
-                  2. You&apos;ll need to redeem your {underlyingTokenSymb}{" "}
-                  assets after settlement
+                  2. Swap your {shareTokenSymb} shares into{" "}
+                  {underlyingTokenSymb} in this investment fund.
                 </ObservationCard>
 
                 <WarningCard title="Withdrawal Disclaimer">
-                  Withdrawn assets will stop generating yield and will no longer
-                  be part of the total value. Redeem them anytime after
-                  settlement.
+                  Once the withdraw is initiated, your assets will stop
+                  generating yield. For receiving your assets back in your
+                  account, you can complete the withdraw anytime after approval.
                 </WarningCard>
               </>
             )}
@@ -311,19 +378,10 @@ export default function VaultView() {
               Cancel
             </Button>
             <Button onClick={handleSubmit}>
-              {operation === "deposit" ? "Deposit" : "Withdraw"}
+              {operation === "DEPOSIT" ? "Invest" : "Init Withdraw"}
             </Button>
           </DialogActionButtons>
         </Dialog>
-
-        {/* Toast */}
-        <Toast
-          show={showToast}
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-          duration={5000}
-        />
       </>
     )
   );

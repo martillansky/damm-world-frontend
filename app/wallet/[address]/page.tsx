@@ -16,7 +16,7 @@ export default function WalletView() {
     if (!isConnected) {
       router.push("/");
     } else {
-      router.push(`/wallet/${address}/vault`);
+      router.push(`/wallet/${address}/smartAccount`);
     }
   }, [isConnected, router, address]);
 
@@ -25,7 +25,7 @@ export default function WalletView() {
       text={
         !isConnected
           ? "Redirecting to connect wallet..."
-          : "Redirecting to your vault..."
+          : "Redirecting to your smart account..."
       }
     />
   );
