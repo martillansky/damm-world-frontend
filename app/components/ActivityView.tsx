@@ -43,6 +43,12 @@ export default function ActivityView() {
     status: string;
   } | null>(null);
 
+  const safeAddressShort =
+    safeAddress?.slice(0, 6) + "..." + safeAddress?.slice(-4);
+  const explorerLink = `${
+    getEnvVars(getTypedChainId(Number(chainId))).BLOCK_EXPLORER_GATEWAY
+  }/address/${safeAddress}`;
+
   const isCancelRequested = (txId: string) => {
     // Allows to hide the cancel button after the transaction is confirmed, waiting for indexer to update the status
     return (
@@ -234,9 +240,23 @@ export default function ActivityView() {
     transactions && (
       <>
         <Card
-          title="Recent Activity"
+          title="DAMM Account"
           variant="small"
-          subtitle="Transaction activity for this investment fund"
+          selector={
+            <a
+              href={explorerLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-lime-400 hover:underline drop-shadow-[0_0_1px_rgba(163,230,53,0.3)]"
+            >
+              {safeAddressShort}
+            </a>
+          }
+        />
+
+        <Card
+          title="Transaction Activity"
+          variant="small"
           selector={
             <Select
               value={filter}

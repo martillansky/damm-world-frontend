@@ -1,7 +1,7 @@
 import { useView, View } from "@/context/ViewContext";
 import { useAppKitAccount } from "@reown/appkit/react";
 import ActivityIcon from "../../icons/ActivityIcon";
-import PositionIcon from "../../icons/PositionIcon";
+//import PositionIcon from "../../icons/PositionIcon";
 import SmartAccountIcon from "../../icons/SmartAccountIcon";
 import VaultIcon from "../../icons/VaultIcon";
 //import VaultPerformanceIcon from "../../icons/VaultPerformanceIcon";
@@ -33,17 +33,17 @@ export default function Footer() {
           /> */}
           <div className="w-px h-8 bg-border-light dark:bg-zinc-700" />
           <FooterButton
-            label="Fund"
+            label="Funds"
             icon={<VaultIcon />}
             active={view === "vault"}
             onClick={() => handleViewChange("vault")}
           />
-          <FooterButton
+          {/* <FooterButton
             label="Position"
             icon={<PositionIcon />}
             active={view === "position"}
             onClick={() => handleViewChange("position")}
-          />
+          /> */}
           <FooterButton
             label="Activity"
             icon={<ActivityIcon />}

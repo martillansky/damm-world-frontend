@@ -78,11 +78,6 @@ export default function SmartAccountView() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<ToastType>("info");
-  /* const safeAddressShort =
-    safeAddress?.slice(0, 6) + "..." + safeAddress?.slice(-4);
-  const explorerLink = `${
-    getEnvVars(getTypedChainId(Number(network.chainId))).BLOCK_EXPLORER_GATEWAY
-  }/address/${safeAddress}`; */
 
   useEffect(() => {
     const retrieveNativeBalance = async () => {
@@ -349,22 +344,6 @@ export default function SmartAccountView() {
                 //secondaryRight={vaultData.positionUSD}
               />
             </Card>
-
-            {/* <Card title="Deployment" variant="small">
-              <CardRow
-                left="Your private fund address"
-                right={
-                  <a
-                    href={explorerLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-lime-400 hover:underline drop-shadow-[0_0_1px_rgba(163,230,53,0.3)]"
-                  >
-                    {safeAddressShort}
-                  </a>
-                }
-              />
-            </Card> */}
           </>
         ) : (
           <div className="flex flex-col items-center min-h-[calc(100vh-300px)]">
@@ -382,15 +361,6 @@ export default function SmartAccountView() {
                 height={356}
               />
             </div>
-
-            {/* Card at the bottom */}
-            <div className="flex-1 flex items-center justify-end mb-8">
-              <Card
-                title="Welcome to DAMM World"
-                variant="small"
-                subtitle="Create your DAMM account, provide an initial deposit, and begin investing in our funds."
-              />
-            </div>
           </div>
         )}
 
@@ -400,7 +370,7 @@ export default function SmartAccountView() {
           onClose={() => setShowDialog(false)}
           title={
             operation === "SUPPLY"
-              ? `Supply ${underlyingTokenSymb}`
+              ? `Deposit ${underlyingTokenSymb}`
               : operation === "EXIT"
               ? `Withdraw ${underlyingTokenSymb}`
               : `Create DAMM Account`
@@ -486,9 +456,9 @@ export default function SmartAccountView() {
             </Button>
             <Button onClick={handleSubmit}>
               {operation === "SUPPLY"
-                ? "Supply"
+                ? "Deposit"
                 : operation === "EXIT"
-                ? "Exit"
+                ? "Withdraw"
                 : "Create"}
             </Button>
           </DialogActionButtons>

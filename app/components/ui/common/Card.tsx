@@ -1,6 +1,6 @@
 import { cloneElement, isValidElement, ReactElement } from "react";
 
-interface CardRowProps {
+export interface CardRowProps {
   left: React.ReactNode;
   tooltip?: string;
   right: React.ReactNode;
@@ -62,6 +62,7 @@ interface CardProps {
   variant?: "large" | "small";
   children?: ReactElement<CardRowProps> | ReactElement<CardRowProps>[];
   selector?: React.ReactNode;
+  onClick?: () => void;
 }
 
 const Card = ({
@@ -70,6 +71,7 @@ const Card = ({
   subtitle,
   variant = "large",
   selector,
+  onClick,
 }: CardProps) => {
   const sectionCore =
     "card bg-gradient-to-br from-gray-100 to-gray-200 dark:bg-gradient-to-br dark:from-zinc-900 dark:to-zinc-800 border-0 dark:border dark:border-zinc-800";
@@ -99,7 +101,10 @@ const Card = ({
   };
 
   return (
-    <section className={variant === "large" ? sectionLarge : sectionSmall}>
+    <section
+      className={variant === "large" ? sectionLarge : sectionSmall}
+      onClick={onClick}
+    >
       <div className={variant === "large" ? containerLarge : containerSmall}>
         <div className="mb-1">
           <div className="flex items-center justify-between">

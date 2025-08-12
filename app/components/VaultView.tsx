@@ -7,19 +7,24 @@ import { useView } from "@/context/ViewContext";
 import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
 import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
 import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
-import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
+import {
+  PositionDataView,
+  VaultDataView,
+} from "@/lib/data/types/DataPresenter.types";
 import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
 import ChartIcon from "./icons/ChartIcon";
 import OverviewIcon from "./icons/OverviewIcon";
-import { BaseActionKey, createActions } from "./ui/common/Action";
+import RedeemIcon from "./icons/RedeemIcon";
+import { BaseActionKey } from "./ui/common/Action";
 import Button from "./ui/common/Button";
-import Card, { CardRow } from "./ui/common/Card";
+import { CardRow } from "./ui/common/Card";
 import ChartCard from "./ui/common/ChartCard";
 import Dialog, {
   DialogActionButtons,
@@ -29,9 +34,9 @@ import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
 import Select from "./ui/common/Select";
+import TokenCard from "./ui/common/TokenCard";
 import ViewToggle from "./ui/common/ViewToggle";
 import WarningCard from "./ui/common/WarningCard";
-import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function VaultView() {
   const { safeAddress } = useSafeLinkedAccountContext();
@@ -44,19 +49,38 @@ export default function VaultView() {
     () => vault?.vaultData,
     [vault?.vaultData]
   );
+  const positionData: PositionDataView | undefined = useMemo(
+    () => vault?.positionData,
+    [vault?.positionData]
+  );
+  const { submitRedeem } = useWithdraw();
+
   const { showTransaction, updateTransactionStatus, hideTransaction } =
     useTransaction();
   const { submitRequestDeposit } = useDeposit();
   const { submitRequestWithdraw } = useWithdraw();
-  const { setActions } = useActionSlot();
-  const [showDialog, setShowDialog] = useState(false);
+
+  const [showDialogFundSelected, setShowDialogFundSelected] = useState(false);
   const [filter, setFilter] = useState("all");
-  const [activeView, setActiveView] = useState("overview");
+  const [activeView, setActiveView] = useState("funds");
+  interface TokenCardProps {
+    name: string;
+    icon: string;
+    active: boolean;
+  }
+  const funds: TokenCardProps[] = [
+    { name: "WLD/USDC", icon: "/usdc.png", active: true },
+    { name: "WLD/DAI", icon: "/worldcoin.jpeg", active: true },
+    { name: "WLD/USDT", icon: "/worldcoin.jpeg", active: true },
+    { name: "WLD/USDCe", icon: "/weth.png", active: true },
+    { name: "WLD/xDAI", icon: "/worldcoin.jpeg", active: false },
+    { name: "WLD/USDT0", icon: "/worldcoin.jpeg", active: false },
+  ];
 
   const viewOptions = [
     {
-      id: "overview",
-      label: "Overview",
+      id: "funds",
+      label: "Investments",
       icon: <OverviewIcon />,
     },
     {
@@ -66,7 +90,7 @@ export default function VaultView() {
     },
   ];
 
-  type VaultActionKey = BaseActionKey & ("DEPOSIT" | "WITHDRAW");
+  type VaultActionKey = BaseActionKey & ("DEPOSIT" | "WITHDRAW" | "REDEEM");
   const [operation, setOperation] = useState<VaultActionKey | null>(null);
 
   const [amount, setAmount] = useState("");
@@ -90,11 +114,53 @@ export default function VaultView() {
 
   const handleOperation = (op: VaultActionKey) => {
     setOperation(op);
-    setShowDialog(true);
+    if (op === "REDEEM") {
+      handleSubmitRedeem();
+    }
+  };
+
+  const handleSubmitRedeem = async () => {
+    try {
+      // Show the overlay
+      showTransaction(
+        "Processing Withdraw completion",
+        "Please wait while we process your withdraw completion..."
+      );
+
+      // Execute transaction
+      const tx = await submitRedeem(amount);
+
+      // Update status to pending
+      updateTransactionStatus(
+        "pending",
+        "Transaction submitted! Waiting for confirmation..."
+      );
+
+      // Wait for confirmation
+      await tx.wait();
+
+      // Update to success
+      updateTransactionStatus("success", "Withdraw completion confirmed!");
+
+      // Hide after 2 seconds
+      setTimeout(hideTransaction, 2000);
+    } catch (error) {
+      console.error("Error in withdraw completion process:", error);
+      // Update to error
+      updateTransactionStatus("error", "Transaction failed. Please try again.");
+
+      // Hide after 3 seconds
+      setTimeout(hideTransaction, 3000);
+    }
+
+    setAmount("");
+    setOperation(null);
+    // Invalidate and refetch vault data
+    queryClient.invalidateQueries({ queryKey: ["vaultData", safeAddress] });
   };
 
   const handleSubmit = async () => {
-    setShowDialog(false);
+    setShowDialogFundSelected(false);
     if (operation === "DEPOSIT") {
       try {
         // Show the overlay
@@ -131,7 +197,7 @@ export default function VaultView() {
         // Hide after 3 seconds
         setTimeout(hideTransaction, 3000);
       }
-    } else {
+    } else if (operation === "WITHDRAW") {
       try {
         // Show the overlay
         showTransaction(
@@ -171,10 +237,120 @@ export default function VaultView() {
         setTimeout(hideTransaction, 3000);
       }
     }
+
     setAmount("");
     setOperation(null);
     // Invalidate and refetch vault data
     queryClient.invalidateQueries({ queryKey: ["vaultData", safeAddress] });
+  };
+
+  const [selectedVault, setSelectedVault] = useState<TokenCardProps | null>(
+    null
+  );
+
+  const renderTokenCard = (fund: TokenCardProps, expanded: boolean = false) => {
+    if (!vaultData) return null;
+    return (
+      <TokenCard
+        key={fund.name}
+        title={`${fund.name}`}
+        subtitle={`${vaultData.aprRaw}% APY (12h avg)`}
+        secondSubtitle={`${vaultData.positionRaw} ${underlyingTokenSymb}`}
+        onClick={() => {
+          if (!expanded) {
+            setSelectedVault(fund);
+            setShowDialogFundSelected(true);
+          }
+        }}
+        icon={
+          <Image
+            src={fund.icon}
+            alt={fund.name}
+            className="w-12 h-12 object-cover rounded-full"
+            width={32}
+            height={32}
+          />
+        }
+        expanded={expanded}
+        active={fund.active}
+      >
+        {expanded ? (
+          <>
+            <CardRow
+              left="TVL"
+              right={vaultData.tvl}
+              secondaryRight={vaultData.tvlChange}
+            />
+            <CardRow
+              left="APY (12h avg)"
+              tooltip="Average annual percentage rate based on the last 12 hours of performance."
+              highlightedRight
+              right={vaultData.apr}
+              secondaryRight={vaultData.aprChange}
+            />
+            <CardRow
+              left="My Deposit"
+              right={`${vaultData.positionRaw} ${underlyingTokenSymb}`}
+              secondaryRight={`${vaultData.positionUSD} USD`}
+            />
+          </>
+        ) : undefined}
+      </TokenCard>
+    );
+  };
+
+  const getOperationsContents = () => {
+    return (
+      <>
+        {(operation === "DEPOSIT" || operation === "WITHDRAW") && (
+          <Input
+            type="number"
+            label={`Amount (${underlyingTokenSymb})`}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            handleMaxClick={handleMaxClick}
+            labelMax={
+              <>
+                Max:{" "}
+                {operation === "DEPOSIT"
+                  ? walletBalance + " " + underlyingTokenSymb
+                  : sharesReadyToWithdraw + " " + underlyingTokenSymb}
+              </>
+            }
+            placeholder="0.0"
+          />
+        )}
+
+        {operation === "DEPOSIT" && (
+          <ObservationCard title="Investing Process">
+            Investing in a DAMM fund implies:
+            <br />
+            1. Depositing your {underlyingTokenSymb} into the fund.
+            <br />
+            2. You&apos;ll receive {shareTokenSymb} shares in your account.
+          </ObservationCard>
+        )}
+
+        {operation === "WITHDRAW" && (
+          <>
+            <ObservationCard title="Withdrawal Process">
+              Due to security reasons, our managers will:
+              <br />
+              1. Verify and approve this request for authenticity.
+              <br />
+              2. Swap your {shareTokenSymb} shares into {underlyingTokenSymb} in
+              this investment fund.
+            </ObservationCard>
+
+            <WarningCard title="Withdrawal Disclaimer">
+              Once the withdraw is initiated, your assets will stop generating
+              yield. For receiving your assets back in your account, you can
+              complete the withdraw anytime after approval.
+            </WarningCard>
+          </>
+        )}
+      </>
+    );
   };
 
   const handleMaxClick = () => {
@@ -217,32 +393,6 @@ export default function VaultView() {
     }
   }, [getBalanceFromSafe, address]);
 
-  useEffect(() => {
-    const actions = createActions(["DEPOSIT", "WITHDRAW"], {
-      DEPOSIT: {
-        label: "Invest",
-        icon: <ArrowUpIcon />,
-        onClick: () => handleOperation("DEPOSIT"),
-      },
-      WITHDRAW: {
-        label: "Init Withdraw",
-        icon: <ArrowDownIcon />,
-        onClick: () => handleOperation("WITHDRAW"),
-      },
-    });
-    setActions(
-      <>
-        {actions.map((action) => (
-          <Button key={action.label} onClick={action.onClick}>
-            {action.icon}
-            <span>{action.label}</span>
-          </Button>
-        ))}
-      </>
-    );
-    return () => setActions(null); // Clean up when component unmounts
-  }, [setActions]);
-
   if (isLoading || isChangingView || !vaultData) {
     return <LoadingComponent text="Loading fund data..." />;
   }
@@ -251,31 +401,11 @@ export default function VaultView() {
     vaultData && (
       <>
         <div className="space-y-4">
-          {/* Overview View */}
-          {activeView === "overview" && (
-            <Card
-              title="Fund Overview"
-              subtitle="Performance metrics for this investment fund"
-              variant="small"
-            >
-              <CardRow
-                left="TVL"
-                right={vaultData.tvl}
-                secondaryRight={vaultData.tvlChange}
-              />
-              <CardRow
-                left="APY (12h avg)"
-                tooltip="Average annual percentage rate based on the last 12 hours of performance."
-                highlightedRight
-                right={vaultData.apr}
-                secondaryRight={vaultData.aprChange}
-              />
-              <CardRow
-                left="Your Position"
-                right={vaultData.position}
-                secondaryRight={vaultData.positionUSD}
-              />
-            </Card>
+          {/* Funds View */}
+          {activeView === "funds" && (
+            <div className="space-y-3 max-h-[calc(100vh-360px)] overflow-y-auto pr-2">
+              {funds.map((fund) => renderTokenCard(fund))}
+            </div>
           )}
 
           {/* Chart View */}
@@ -305,7 +435,15 @@ export default function VaultView() {
         </div>
 
         {/* Fixed View Toggle */}
-        <div className="fixed bottom-36 left-1/2 transform -translate-x-1/2">
+        <div
+          className={`fixed ${
+            activeView === "overview"
+              ? "bottom-36"
+              : activeView === "chart"
+              ? "bottom-20"
+              : "bottom-22"
+          } left-1/2 transform -translate-x-1/2`}
+        >
           <ViewToggle
             views={viewOptions}
             activeView={activeView}
@@ -314,71 +452,71 @@ export default function VaultView() {
           />
         </div>
 
-        {/* Dialog */}
+        {/* Dialog Fund Selected */}
         <Dialog
-          open={showDialog}
-          onClose={() => setShowDialog(false)}
-          title={
-            operation === "DEPOSIT"
-              ? `Invest ${underlyingTokenSymb}`
-              : `Init ${underlyingTokenSymb} Withdraw`
-          }
+          open={showDialogFundSelected}
+          onClose={() => {
+            setShowDialogFundSelected(false);
+            setAmount("");
+            setOperation(null);
+            setSelectedVault(null);
+          }}
+          title={`Fund ${selectedVault?.name}`}
         >
           <DialogContents>
-            <Input
-              type="number"
-              label={`Amount (${underlyingTokenSymb})`}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              handleMaxClick={handleMaxClick}
-              labelMax={
-                <>
-                  Max:{" "}
-                  {operation === "DEPOSIT"
-                    ? walletBalance + " " + underlyingTokenSymb
-                    : sharesReadyToWithdraw + " " + underlyingTokenSymb}
-                </>
-              }
-              placeholder="0.0"
-            />
-
-            {operation === "DEPOSIT" && (
-              <ObservationCard title="Investing Process">
-                Investing in a DAMM fund implies:
-                <br />
-                1. Depositing your {underlyingTokenSymb} into the fund.
-                <br />
-                2. You&apos;ll receive {shareTokenSymb} shares in your account.
-              </ObservationCard>
-            )}
-
-            {operation === "WITHDRAW" && (
-              <>
-                <ObservationCard title="Withdrawal Process">
-                  Due to security reasons, our managers will:
-                  <br />
-                  1. Verify and approve this request for authenticity.
-                  <br />
-                  2. Swap your {shareTokenSymb} shares into{" "}
-                  {underlyingTokenSymb} in this investment fund.
+            <>
+              {selectedVault && renderTokenCard(selectedVault, true)}
+              {operation && getOperationsContents()}
+              {!operation && (
+                <ObservationCard title="Fund Selection">
+                  You have selected the {selectedVault?.name} fund. You can
+                  invest in this fund by depositing {underlyingTokenSymb}.
                 </ObservationCard>
-
-                <WarningCard title="Withdrawal Disclaimer">
-                  Once the withdraw is initiated, your assets will stop
-                  generating yield. For receiving your assets back in your
-                  account, you can complete the withdraw anytime after approval.
-                </WarningCard>
-              </>
-            )}
+              )}
+            </>
           </DialogContents>
 
           <DialogActionButtons>
-            <Button variant="secondary" onClick={() => setShowDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>
-              {operation === "DEPOSIT" ? "Invest" : "Init Withdraw"}
-            </Button>
+            {operation ? (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setOperation(null);
+                    setAmount("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmit}>
+                  {operation === "DEPOSIT"
+                    ? "Invest"
+                    : operation === "WITHDRAW"
+                    ? "Init Withdraw"
+                    : "Confirm"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button onClick={() => handleOperation("DEPOSIT")}>
+                  <ArrowUpIcon />
+                  Invest
+                </Button>
+                {positionData?.availableToRedeemRaw &&
+                positionData.availableToRedeemRaw > 0 ? (
+                  <Button onClick={() => handleOperation("REDEEM")}>
+                    <RedeemIcon />
+                    Claim {positionData.availableToRedeemRaw}{" "}
+                    {underlyingTokenSymb}
+                  </Button>
+                ) : (
+                  <Button onClick={() => handleOperation("WITHDRAW")}>
+                    <ArrowDownIcon />
+                    Init Withdraw
+                  </Button>
+                )}
+              </>
+            )}
           </DialogActionButtons>
         </Dialog>
       </>

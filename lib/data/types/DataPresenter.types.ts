@@ -14,6 +14,7 @@ export interface VaultDataView {
   tvl: string;
   tvlChange: string;
   apr: string;
+  aprRaw: number;
   aprChange: string;
   valueGained: string;
   valueGainedUSD: string;

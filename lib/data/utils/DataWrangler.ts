@@ -28,6 +28,7 @@ export function transformVaultData(vaultData: VaultData): VaultDataView {
     tvl: `$${vaultData.tvl}`,
     tvlChange: `(${vaultData.tvlChange > 0 ? "+" : ""}${vaultData.tvlChange}%)`,
     apr: `${vaultData.apr}%`,
+    aprRaw: vaultData.apr,
     aprChange: `(${Number(vaultData.aprChange) > 0 ? "+" : ""}${
       vaultData.aprChange
     }%)`,
