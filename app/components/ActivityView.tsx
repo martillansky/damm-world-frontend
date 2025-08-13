@@ -255,7 +255,7 @@ export default function ActivityView() {
         />
 
         <Card
-          title="Transaction Activity"
+          //title="Transaction Activity"
           variant="small"
           selector={
             <Select

@@ -9,6 +9,8 @@ export default function SubHeader() {
       ? isDeployed
         ? "DAMM Account"
         : "Welcome to DAMM World"
+      : view === "activity"
+      ? "Account Activity"
       : "Investment Funds";
 
   return (

@@ -472,28 +472,28 @@ export default function VaultView() {
                         style="observation"
                       />
                       <CardRow
-                        left="-- Entrance fee"
+                        left="Entrance fee"
                         right={selectedVault.entranceFee}
                         variant="small"
-                        style="observation"
+                        style="bullet"
                       />
                       <CardRow
-                        left="-- Exit fee"
+                        left="Exit fee"
                         right={selectedVault.exitFee}
                         variant="small"
-                        style="observation"
+                        style="bullet"
                       />
                       <CardRow
-                        left="-- Performance fee"
+                        left="Performance fee"
                         right={selectedVault.performanceFee}
                         variant="small"
-                        style="observation"
+                        style="bullet"
                       />
                       <CardRow
-                        left="-- Management fee"
+                        left="Management fee"
                         right={selectedVault.managementFee}
                         variant="small"
-                        style="observation"
+                        style="bullet"
                       />
                     </>
                   </ObservationCard>

@@ -1,4 +1,5 @@
 import { cloneElement, isValidElement, ReactElement } from "react";
+import PointRightIcon from "../../icons/PointRightIcon";
 
 export interface CardRowProps {
   left: React.ReactNode;
@@ -8,7 +9,7 @@ export interface CardRowProps {
   secondaryRight?: React.ReactNode;
   variant?: "small" | "large";
   horizontalLine?: boolean;
-  style?: "observation" | "default";
+  style?: "observation" | "default" | "bullet";
 }
 
 export const CardRow = ({
@@ -32,15 +33,20 @@ export const CardRow = ({
     <div className={variant === "large" ? rowLarge : rowSmall}>
       <span
         className={
-          style === "observation" ? "" : "text-muted-light dark:text-muted"
+          style === "observation" || style === "bullet"
+            ? ""
+            : "text-muted-light dark:text-muted"
         }
       >
-        {left}
-        {tooltip && (
-          <span className="ml-1 text-xs cursor-help" title={tooltip}>
-            ℹ️
-          </span>
-        )}
+        <div className="flex items-center gap-1">
+          {style === "bullet" ? <PointRightIcon /> : ""}
+          {left}
+          {tooltip && (
+            <span className="ml-1 text-xs cursor-help" title={tooltip}>
+              ℹ️
+            </span>
+          )}
+        </div>
       </span>
       {right && (
         <div className="text-right">
@@ -87,8 +93,6 @@ const Card = ({
     ? "from-gray-200 to-gray-300 dark:from-zinc-800 dark:to-zinc-700"
     : "from-gray-100 to-gray-200 dark:from-zinc-900 dark:to-zinc-800";
   const sectionCore = `card bg-gradient-to-br dark:bg-gradient-to-br ${backgorundColor} border-0 dark:border dark:border-zinc-800`;
-  /* const sectionCore =
-    "card bg-gradient-to-br from-gray-100 to-gray-200 dark:bg-gradient-to-br dark:from-zinc-900 dark:to-zinc-800 border-0 dark:border dark:border-zinc-800"; */
   const sectionLarge = `${sectionCore} p-6`;
   const sectionSmall = `${sectionCore} p-4`;
   const containerLarge = "space-y-6";
@@ -121,14 +125,19 @@ const Card = ({
     >
       <div className={variant === "large" ? containerLarge : containerSmall}>
         <div className="mb-1">
-          {title && (
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">{title}</h3>
-              {selector && (
-                <div className="flex items-center gap-2">{selector}</div>
-              )}
-            </div>
-          )}
+          <div className="flex items-center w-full">
+            {title && (
+              <h3 className="text-lg font-semibold justify-start w-full">
+                {title}
+              </h3>
+            )}
+            {selector && (
+              <div className="flex items-center gap-2 justify-end w-full">
+                {selector}
+              </div>
+            )}
+          </div>
+
           {subtitle && (
             <p className="text-sm text-muted-light dark:text-muted">
               {subtitle}
