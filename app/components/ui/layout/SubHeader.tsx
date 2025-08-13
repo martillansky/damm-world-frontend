@@ -32,8 +32,8 @@ export default function SubHeader() {
       )}
       {view === "smartAccount" && isDeployed && (
         <p className="text-sm text-muted-light dark:text-muted">
-          Your DAMM account acts as your personal gateway to deposit into and
-          manage positions across our investment funds.
+          Your DAMM account acts as your personal gateway to invest in our
+          funds.
         </p>
       )}
     </div>

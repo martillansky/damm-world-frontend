@@ -66,6 +66,15 @@ const config: Config = {
         glow: "0 0 15px rgba(163, 230, 53, 0.3)",
         glowViolet: "0 0 15px rgba(127, 90, 240, 0.3)",
       },
+      keyframes: {
+        "slide-up": {
+          "0%": { transform: "translateY(100%)" },
+          "100%": { transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        "slide-up": "slide-up 0.3s ease-out",
+      },
       backgroundImage: {
         "gradient-primary":
           "linear-gradient(135deg, var(--tw-gradient-start) 0%, var(--tw-gradient-end) 100%)",

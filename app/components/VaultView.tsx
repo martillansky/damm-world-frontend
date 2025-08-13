@@ -20,11 +20,10 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
 import ChartIcon from "./icons/ChartIcon";
-import OverviewIcon from "./icons/OverviewIcon";
 import RedeemIcon from "./icons/RedeemIcon";
 import { BaseActionKey } from "./ui/common/Action";
 import Button from "./ui/common/Button";
-import { CardRow } from "./ui/common/Card";
+import Card, { CardRow } from "./ui/common/Card";
 import ChartCard from "./ui/common/ChartCard";
 import Dialog, {
   DialogActionButtons,
@@ -35,11 +34,17 @@ import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
 import Select from "./ui/common/Select";
 import TokenCard from "./ui/common/TokenCard";
-import ViewToggle from "./ui/common/ViewToggle";
 import WarningCard from "./ui/common/WarningCard";
+import {
+  funds,
+  getFilterDisplayLabels,
+  getFilterOptions,
+  getMockPerformanceData,
+  TokenCardProps,
+} from "./ui/mockVaults/MockVaultData";
 
 export default function VaultView() {
-  const { safeAddress } = useSafeLinkedAccountContext();
+  const { safeAddress, isDeployed } = useSafeLinkedAccountContext();
   const { address } = useParams();
   const network = useAppKitNetwork();
   const { vault, isLoading } = useVault();
@@ -62,33 +67,7 @@ export default function VaultView() {
 
   const [showDialogFundSelected, setShowDialogFundSelected] = useState(false);
   const [filter, setFilter] = useState("all");
-  const [activeView, setActiveView] = useState("funds");
-  interface TokenCardProps {
-    name: string;
-    icon: string;
-    active: boolean;
-  }
-  const funds: TokenCardProps[] = [
-    { name: "WLD/USDC", icon: "/usdc.png", active: true },
-    { name: "WLD/DAI", icon: "/worldcoin.jpeg", active: true },
-    { name: "WLD/USDT", icon: "/worldcoin.jpeg", active: true },
-    { name: "WLD/USDCe", icon: "/weth.png", active: true },
-    { name: "WLD/xDAI", icon: "/worldcoin.jpeg", active: false },
-    { name: "WLD/USDT0", icon: "/worldcoin.jpeg", active: false },
-  ];
-
-  const viewOptions = [
-    {
-      id: "funds",
-      label: "Investments",
-      icon: <OverviewIcon />,
-    },
-    {
-      id: "chart",
-      label: "Performance",
-      icon: <ChartIcon />,
-    },
-  ];
+  const [showDialogCharts, setShowDialogCharts] = useState(false);
 
   type VaultActionKey = BaseActionKey & ("DEPOSIT" | "WITHDRAW" | "REDEEM");
   const [operation, setOperation] = useState<VaultActionKey | null>(null);
@@ -248,7 +227,7 @@ export default function VaultView() {
     null
   );
 
-  const renderTokenCard = (fund: TokenCardProps, expanded: boolean = false) => {
+  const renderTokenCard = (fund: TokenCardProps) => {
     if (!vaultData) return null;
     return (
       <TokenCard
@@ -257,10 +236,8 @@ export default function VaultView() {
         subtitle={`${vaultData.aprRaw}% APY (12h avg)`}
         secondSubtitle={`${vaultData.positionRaw} ${underlyingTokenSymb}`}
         onClick={() => {
-          if (!expanded) {
-            setSelectedVault(fund);
-            setShowDialogFundSelected(true);
-          }
+          setSelectedVault(fund);
+          setShowDialogFundSelected(true);
         }}
         icon={
           <Image
@@ -271,31 +248,8 @@ export default function VaultView() {
             height={32}
           />
         }
-        expanded={expanded}
         active={fund.active}
-      >
-        {expanded ? (
-          <>
-            <CardRow
-              left="TVL"
-              right={vaultData.tvl}
-              secondaryRight={vaultData.tvlChange}
-            />
-            <CardRow
-              left="APY (12h avg)"
-              tooltip="Average annual percentage rate based on the last 12 hours of performance."
-              highlightedRight
-              right={vaultData.apr}
-              secondaryRight={vaultData.aprChange}
-            />
-            <CardRow
-              left="My Deposit"
-              right={`${vaultData.positionRaw} ${underlyingTokenSymb}`}
-              secondaryRight={`${vaultData.positionUSD} USD`}
-            />
-          </>
-        ) : undefined}
-      </TokenCard>
+      />
     );
   };
 
@@ -402,123 +356,209 @@ export default function VaultView() {
       <>
         <div className="space-y-4">
           {/* Funds View */}
-          {activeView === "funds" && (
-            <div className="space-y-3 max-h-[calc(100vh-360px)] overflow-y-auto pr-2">
-              {funds.map((fund) => renderTokenCard(fund))}
-            </div>
-          )}
+          <div className="flex justify-end mb-2">
+            <Button
+              onClick={() => setShowDialogCharts(true)}
+              variant="secondary"
+            >
+              <ChartIcon />
+              <span>Performance</span>
+            </Button>
+          </div>
+          <div className="space-y-3 max-h-[calc(100vh-360px)] overflow-y-auto pr-2">
+            {funds.map((fund) => renderTokenCard(fund))}
+          </div>
 
           {/* Chart View */}
-          {activeView === "chart" && (
-            <ChartCard
-              title="Fund Performance"
-              subtitle="Historical performance metrics and trends"
-              variant="small"
-              selector={
-                <Select
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  options={["all", "WLD/USDC", "WLD/DAI", "WLD/USDT"]}
-                  displayLabels={{
-                    all: "All Funds",
-                    "WLD/USDC": "WLD/USDC",
-                    "WLD/DAI": "WLD/DAI",
-                    "WLD/USDT": "WLD/USDT",
-                  }}
-                  size="small"
+          <Dialog
+            open={showDialogCharts}
+            onClose={() => {
+              setShowDialogCharts(false);
+            }}
+            title="Fund Performances"
+          >
+            <DialogContents>
+              <ChartCard
+                variant="small"
+                light
+                selector={
+                  <Select
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    options={getFilterOptions()}
+                    displayLabels={getFilterDisplayLabels()}
+                    size="small"
+                  />
+                }
+              >
+                <StackedAreaChart
+                  vaultName={filter}
+                  data={getMockPerformanceData()}
                 />
-              }
-            >
-              <StackedAreaChart vaultName={filter} />
-            </ChartCard>
-          )}
-        </div>
-
-        {/* Fixed View Toggle */}
-        <div
-          className={`fixed ${
-            activeView === "overview"
-              ? "bottom-36"
-              : activeView === "chart"
-              ? "bottom-20"
-              : "bottom-22"
-          } left-1/2 transform -translate-x-1/2`}
-        >
-          <ViewToggle
-            views={viewOptions}
-            activeView={activeView}
-            onViewChange={setActiveView}
-            className="scale-75"
-          />
+              </ChartCard>
+            </DialogContents>
+            <DialogActionButtons>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowDialogCharts(false);
+                }}
+              >
+                Close
+              </Button>
+            </DialogActionButtons>
+          </Dialog>
         </div>
 
         {/* Dialog Fund Selected */}
-        <Dialog
-          open={showDialogFundSelected}
-          onClose={() => {
-            setShowDialogFundSelected(false);
-            setAmount("");
-            setOperation(null);
-            setSelectedVault(null);
-          }}
-          title={`Fund ${selectedVault?.name}`}
-        >
-          <DialogContents>
-            <>
-              {selectedVault && renderTokenCard(selectedVault, true)}
-              {operation && getOperationsContents()}
-              {!operation && (
-                <ObservationCard title="Fund Selection">
-                  You have selected the {selectedVault?.name} fund. You can
-                  invest in this fund by depositing {underlyingTokenSymb}.
-                </ObservationCard>
-              )}
-            </>
-          </DialogContents>
+        {selectedVault && (
+          <Dialog
+            open={showDialogFundSelected}
+            onClose={() => {
+              setShowDialogFundSelected(false);
+              setAmount("");
+              setOperation(null);
+              setSelectedVault(null);
+            }}
+            title={`${selectedVault.name}`}
+            icon={
+              <Image
+                src={selectedVault.icon}
+                alt={selectedVault.name}
+                className="w-12 h-12 object-cover rounded-full"
+                width={32}
+                height={32}
+              />
+            }
+            statusIcon={
+              !selectedVault.active && (
+                <div className="text-right ml-4">
+                  <h3 className="bg-white dark:bg-red-400/10 text-red-400 px-2 py-0.5 rounded-md text-xs font-medium border border-red-400/20 drop-shadow-[0_0_1px_rgba(239,68,68,0.3)]">
+                    Deprecated
+                  </h3>
+                </div>
+              )
+            }
+          >
+            <DialogContents>
+              <>
+                <Card variant="small" light>
+                  <CardRow
+                    left="TVL"
+                    right={vaultData.tvl}
+                    secondaryRight={vaultData.tvlChange}
+                  />
+                  <CardRow
+                    left="APY (12h avg)"
+                    tooltip="Average annual percentage rate based on the last 12 hours of performance."
+                    highlightedRight
+                    right={vaultData.apr}
+                    secondaryRight={vaultData.aprChange}
+                  />
+                  <CardRow
+                    left="My Deposit"
+                    right={`${vaultData.positionRaw} ${underlyingTokenSymb}`}
+                    secondaryRight={`${vaultData.positionUSD} USD`}
+                  />
+                </Card>
 
-          <DialogActionButtons>
-            {operation ? (
-              <>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setOperation(null);
-                    setAmount("");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleSubmit}>
-                  {operation === "DEPOSIT"
-                    ? "Invest"
-                    : operation === "WITHDRAW"
-                    ? "Init Withdraw"
-                    : "Confirm"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button onClick={() => handleOperation("DEPOSIT")}>
-                  <ArrowUpIcon />
-                  Invest
-                </Button>
-                {positionData?.availableToRedeemRaw &&
-                positionData.availableToRedeemRaw > 0 ? (
-                  <Button onClick={() => handleOperation("REDEEM")}>
-                    <RedeemIcon />
-                    Claim {positionData.availableToRedeemRaw}{" "}
-                    {underlyingTokenSymb}
-                  </Button>
-                ) : (
-                  <Button onClick={() => handleOperation("WITHDRAW")}>
-                    <ArrowDownIcon />
-                    Init Withdraw
-                  </Button>
+                {operation && getOperationsContents()}
+                {!operation && (
+                  <ObservationCard title="Investment Conditions">
+                    <>
+                      <CardRow
+                        left={`You can invest in this fund by depositing ${underlyingTokenSymb}`}
+                        variant="small"
+                        style="observation"
+                      />
+                      <CardRow
+                        left="-- Entrance fee"
+                        right={selectedVault.entranceFee}
+                        variant="small"
+                        style="observation"
+                      />
+                      <CardRow
+                        left="-- Exit fee"
+                        right={selectedVault.exitFee}
+                        variant="small"
+                        style="observation"
+                      />
+                      <CardRow
+                        left="-- Performance fee"
+                        right={selectedVault.performanceFee}
+                        variant="small"
+                        style="observation"
+                      />
+                      <CardRow
+                        left="-- Management fee"
+                        right={selectedVault.managementFee}
+                        variant="small"
+                        style="observation"
+                      />
+                    </>
+                  </ObservationCard>
                 )}
               </>
-            )}
-          </DialogActionButtons>
-        </Dialog>
+            </DialogContents>
+
+            <DialogActionButtons>
+              {operation ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setOperation(null);
+                      setAmount("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSubmit}>
+                    {operation === "DEPOSIT"
+                      ? "Invest"
+                      : operation === "WITHDRAW"
+                      ? "Init Withdraw"
+                      : "Confirm"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {selectedVault.active && (
+                    <Button
+                      onClick={() => handleOperation("DEPOSIT")}
+                      disabled={!isDeployed}
+                    >
+                      <ArrowUpIcon />
+                      <span>Invest</span>
+                    </Button>
+                  )}
+                  {(positionData?.availableToRedeemRaw &&
+                    positionData.availableToRedeemRaw > 0) ||
+                  !selectedVault.active ? (
+                    <Button
+                      onClick={() => handleOperation("REDEEM")}
+                      disabled={!isDeployed}
+                    >
+                      <RedeemIcon />
+                      <span>
+                        Claim {positionData?.availableToRedeemRaw}{" "}
+                        {underlyingTokenSymb}
+                      </span>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleOperation("WITHDRAW")}
+                      disabled={!isDeployed}
+                    >
+                      <ArrowDownIcon />
+                      <span>Init Withdraw</span>
+                    </Button>
+                  )}
+                </>
+              )}
+            </DialogActionButtons>
+          </Dialog>
+        )}
       </>
     )
   );

@@ -2,9 +2,15 @@ import { curveCardinal } from "@visx/curve";
 import ParentSize from "@visx/responsive/lib/components/ParentSize";
 import { AreaSeries, AreaStack, Axis, Tooltip, XYChart } from "@visx/xychart";
 import React from "react";
-import { data, DataPoint } from "./MockData";
+import { DataPoint, VaultData } from "../../ui/mockVaults/MockVaultData";
 
-export default function StackedAreaChart({ vaultName }: { vaultName: string }) {
+export default function StackedAreaChart({
+  vaultName,
+  data,
+}: {
+  vaultName: string;
+  data: VaultData[];
+}) {
   const filteredData =
     vaultName === "all"
       ? data

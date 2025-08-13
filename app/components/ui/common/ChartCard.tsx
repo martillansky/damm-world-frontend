@@ -2,11 +2,12 @@ import React, { useState } from "react";
 import ViewToggle from "./ViewToggle";
 
 interface ChartCardProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   variant?: "large" | "small";
   children: React.ReactNode;
   selector?: React.ReactNode;
+  light?: boolean;
 }
 
 const ChartCard = ({
@@ -15,6 +16,7 @@ const ChartCard = ({
   subtitle,
   variant = "large",
   selector,
+  light = false,
 }: ChartCardProps) => {
   const [activeView, setActiveView] = useState("24h");
   const viewOptions = [
@@ -44,8 +46,11 @@ const ChartCard = ({
     },
   ];
 
-  const sectionCore =
-    "card bg-gradient-to-br from-gray-100 to-gray-200 dark:bg-gradient-to-br dark:from-zinc-900 dark:to-zinc-800 border-0 dark:border dark:border-zinc-800";
+  const backgorundColor = light
+    ? "from-gray-200 to-gray-300 dark:from-zinc-800 dark:to-zinc-700"
+    : "from-gray-100 to-gray-200 dark:from-zinc-900 dark:to-zinc-800";
+
+  const sectionCore = `card bg-gradient-to-br dark:bg-gradient-to-br border-0 dark:border dark:border-zinc-800 ${backgorundColor} mb-12`;
   const sectionLarge = `${sectionCore} p-6`;
   const sectionSmall = `${sectionCore} p-4`;
   const containerLarge = "space-y-6";
@@ -57,12 +62,19 @@ const ChartCard = ({
     <section className={variant === "large" ? sectionLarge : sectionSmall}>
       <div className={variant === "large" ? containerLarge : containerSmall}>
         <div className="mb-1">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">{title}</h3>
+          <div className="flex items-center w-full">
+            {title && (
+              <h3 className="text-lg font-semibold justify-start w-full">
+                {title}
+              </h3>
+            )}
             {selector && (
-              <div className="flex items-center gap-2">{selector}</div>
+              <div className="flex items-center gap-2 justify-end w-full">
+                {selector}
+              </div>
             )}
           </div>
+
           {subtitle && (
             <p className="text-sm text-muted-light dark:text-muted">
               {subtitle}

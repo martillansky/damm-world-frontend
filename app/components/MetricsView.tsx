@@ -11,6 +11,7 @@ import ChartCard from "./ui/common/ChartCard";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import Select from "./ui/common/Select";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
+import { mockPerformanceData } from "./ui/mockVaults/MockVaultData";
 
 export default function MetricsView() {
   const { vault, isLoading } = useVault();
@@ -93,7 +94,7 @@ export default function MetricsView() {
             />
           }
         >
-          <StackedAreaChart vaultName={filter} />
+          <StackedAreaChart vaultName={filter} data={mockPerformanceData} />
         </ChartCard>
       </>
     )

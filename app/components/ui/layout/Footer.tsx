@@ -5,11 +5,12 @@ import ActivityIcon from "../../icons/ActivityIcon";
 import SmartAccountIcon from "../../icons/SmartAccountIcon";
 import VaultIcon from "../../icons/VaultIcon";
 //import VaultPerformanceIcon from "../../icons/VaultPerformanceIcon";
+import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 
 export default function Footer() {
   const { view, setView } = useView();
   const { address } = useAppKitAccount();
-
+  const { isDeployed } = useSafeLinkedAccountContext();
   const handleViewChange = (nextView: View) => {
     if (!address) return;
     setView(nextView);
@@ -31,7 +32,7 @@ export default function Footer() {
             active={view === "metrics"}
             onClick={() => handleViewChange("metrics")}
           /> */}
-          <div className="w-px h-8 bg-border-light dark:bg-zinc-700" />
+          {/* <div className="w-px h-8 bg-border-light dark:bg-zinc-700" /> */}
           <FooterButton
             label="Funds"
             icon={<VaultIcon />}
@@ -49,6 +50,7 @@ export default function Footer() {
             icon={<ActivityIcon />}
             active={view === "activity"}
             onClick={() => handleViewChange("activity")}
+            disabled={!isDeployed}
           />
         </div>
       </div>
@@ -61,17 +63,22 @@ function FooterButton({
   icon,
   active,
   onClick,
+  disabled = false,
 }: {
   label: string;
   icon: React.ReactNode;
   active: boolean;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={`relative flex flex-col items-center transition-all duration-200 ${
-        active
+        disabled
+          ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+          : active
           ? "text-lime-400 drop-shadow-[0_0_1px_rgba(163,230,53,0.3)] scale-110"
           : "text-muted hover:text-lime-400"
       }`}

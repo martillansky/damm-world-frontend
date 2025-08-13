@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
 import ChartCard from "./ui/common/ChartCard";
 import Select from "./ui/common/Select";
+import { mockPerformanceData } from "./ui/mockVaults/MockVaultData";
 
 export default function PresentationView() {
   const { theme } = useTheme();
@@ -73,7 +74,10 @@ export default function PresentationView() {
                       />
                     }
                   >
-                    <StackedAreaChart vaultName={filter} />
+                    <StackedAreaChart
+                      vaultName={filter}
+                      data={mockPerformanceData}
+                    />
                   </ChartCard>
                 </div>
               </div>
