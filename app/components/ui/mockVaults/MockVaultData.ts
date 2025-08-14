@@ -1,4 +1,5 @@
 export interface TokenCardProps {
+  key: string;
   name: string;
   icon: string;
   active: boolean;
@@ -9,7 +10,8 @@ export interface TokenCardProps {
 }
 export const funds: TokenCardProps[] = [
   {
-    name: "WLD/USDC",
+    key: "USDC1",
+    name: "USDC",
     icon: "/usdc.png",
     active: true,
     entranceFee: "0.00%",
@@ -18,7 +20,8 @@ export const funds: TokenCardProps[] = [
     managementFee: "0.00%",
   },
   {
-    name: "WLD/DAI",
+    key: "WLD1",
+    name: "WLD",
     icon: "/worldcoin.jpeg",
     active: true,
     entranceFee: "0.00%",
@@ -27,7 +30,8 @@ export const funds: TokenCardProps[] = [
     managementFee: "0.00%",
   },
   {
-    name: "WLD/USDT",
+    key: "USDT1",
+    name: "USDT",
     icon: "/usdt.png",
     active: true,
     entranceFee: "0.00%",
@@ -36,7 +40,8 @@ export const funds: TokenCardProps[] = [
     managementFee: "0.00%",
   },
   {
-    name: "WETH/USDCe",
+    key: "WETH1",
+    name: "WETH",
     icon: "/weth.png",
     active: true,
     entranceFee: "0.00%",
@@ -45,7 +50,8 @@ export const funds: TokenCardProps[] = [
     managementFee: "0.00%",
   },
   {
-    name: "WLD/xDAI",
+    key: "xDAI1",
+    name: "xDAI",
     icon: "/dai.png",
     active: false,
     entranceFee: "0.00%",
@@ -54,8 +60,29 @@ export const funds: TokenCardProps[] = [
     managementFee: "0.00%",
   },
   {
-    name: "WLD/USDT0",
+    key: "WLD2",
+    name: "WLD",
     icon: "/worldcoin.jpeg",
+    active: false,
+    entranceFee: "0.00%",
+    exitFee: "0.00%",
+    performanceFee: "0.00%",
+    managementFee: "0.00%",
+  },
+  {
+    key: "USDC2",
+    name: "USDC",
+    icon: "/usdc.png",
+    active: false,
+    entranceFee: "0.00%",
+    exitFee: "0.00%",
+    performanceFee: "0.00%",
+    managementFee: "0.00%",
+  },
+  {
+    key: "xDAI2",
+    name: "xDAI",
+    icon: "/dai.png",
     active: false,
     entranceFee: "0.00%",
     exitFee: "0.00%",

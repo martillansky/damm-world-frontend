@@ -213,6 +213,8 @@ export function useSafeLinkedAccount() {
 
     const amountInWei = parseUnits(amount, tokenMetadata.decimals);
 
+    await executeApproveSafeSpender(amountInWei);
+
     // Transfer tokens from user to safe if the one time approval is done
     const transferFromTx = getERC20TransferFromTx({
       from: address,
@@ -255,7 +257,7 @@ export function useSafeLinkedAccount() {
     }
   };
 
-  const executeApproveSafeSpender = async () => {
+  const executeApproveSafeSpender = async (amount?: bigint) => {
     if (!safeSDK || !state.safeAddress || !client)
       throw new Error("Safe not ready");
     if (!address || !network.chainId) throw new Error("Failed connection");
@@ -271,6 +273,7 @@ export function useSafeLinkedAccount() {
       owner: address,
       spender: state.safeAddress,
       publicClient: publicClient!,
+      amount: amount,
     }));
 
     if (isERC20ApprovalRequired) {

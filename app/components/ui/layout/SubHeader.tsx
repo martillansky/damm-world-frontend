@@ -20,12 +20,12 @@ export default function SubHeader() {
           <h2 className="text-2xl font-bold">{title}</h2>
         </div>
       </div>
-      {view === "vault" && (
+      {/* {view === "vault" && (
         <p className="text-sm text-muted-light dark:text-muted">
           Investment funds run by DAMM Capital on Uniswap V4 in a sophisticated,
           active manner.
         </p>
-      )}
+      )} */}
       {view === "smartAccount" && !isDeployed && (
         <p className="text-sm text-muted-light dark:text-muted">
           Create your DAMM account, deposit, and begin investing in our hedge

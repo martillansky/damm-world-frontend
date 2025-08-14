@@ -106,6 +106,7 @@ export default function VaultView() {
         "Please wait while we process your withdraw completion..."
       );
 
+      const amount = String(positionData!.availableToRedeemRaw);
       // Execute transaction
       const tx = await submitRedeem(amount);
 
@@ -231,7 +232,7 @@ export default function VaultView() {
     if (!vaultData) return null;
     return (
       <TokenCard
-        key={fund.name}
+        key={fund.key}
         title={`${fund.name}`}
         subtitle={`${vaultData.aprRaw}% APY (12h avg)`}
         secondSubtitle={`${vaultData.positionRaw} ${underlyingTokenSymb}`}
@@ -356,17 +357,20 @@ export default function VaultView() {
       <>
         <div className="space-y-4">
           {/* Funds View */}
-          <div className="flex justify-end mb-2">
-            <Button
-              onClick={() => setShowDialogCharts(true)}
-              variant="secondary"
-            >
-              <ChartIcon />
-              <span>Performance</span>
-            </Button>
-          </div>
-          <div className="space-y-3 max-h-[calc(100vh-360px)] overflow-y-auto pr-2">
-            {funds.map((fund) => renderTokenCard(fund))}
+          <div className="ml-2">
+            <div className="flex justify-end mb-3 mr-2">
+              <Button
+                onClick={() => setShowDialogCharts(true)}
+                variant="secondary"
+              >
+                <ChartIcon />
+                <span>Performance</span>
+              </Button>
+            </div>
+
+            <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
+              {funds.map((fund) => renderTokenCard(fund))}
+            </div>
           </div>
 
           {/* Chart View */}
@@ -434,7 +438,7 @@ export default function VaultView() {
               !selectedVault.active && (
                 <div className="text-right ml-4">
                   <h3 className="bg-white dark:bg-red-400/10 text-red-400 px-2 py-0.5 rounded-md text-xs font-medium border border-red-400/20 drop-shadow-[0_0_1px_rgba(239,68,68,0.3)]">
-                    Deprecated
+                    Closed
                   </h3>
                 </div>
               )
@@ -540,8 +544,9 @@ export default function VaultView() {
                       disabled={!isDeployed}
                     >
                       <RedeemIcon />
-                      <span>
-                        Claim {positionData?.availableToRedeemRaw}{" "}
+                      <span /* className="text-xs" */>
+                        {/* Claim  */}
+                        {positionData?.availableToRedeemRaw}{" "}
                         {underlyingTokenSymb}
                       </span>
                     </Button>

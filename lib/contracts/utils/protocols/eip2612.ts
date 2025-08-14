@@ -245,11 +245,13 @@ export async function isERC20Approved({
   owner,
   spender,
   publicClient,
+  amount,
 }: {
   token: Address;
   owner: Address;
   spender: Address;
   publicClient: PublicClient;
+  amount?: bigint;
 }): Promise<boolean> {
   const allowance = (await publicClient.readContract({
     address: token,
@@ -258,15 +260,10 @@ export async function isERC20Approved({
     args: [owner, spender],
   })) as bigint;
 
-  const requiredAmount = BigNumber.from(MAX_UINT160);
+  const requiredAmount = amount || BigNumber.from(MAX_UINT160);
   const isApproved = BigNumber.from(allowance).gte(requiredAmount);
 
   return isApproved;
-  /* const expiration = allowance[1];
-  const now = BigInt(Math.floor(Date.now() / 1000)); // current time in seconds as BigInt
-  const isExpired = expiration < now;
-
-  return isApproved && !isExpired; */
 }
 
 export async function isERC20Permited({

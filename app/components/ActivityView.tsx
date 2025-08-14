@@ -162,7 +162,7 @@ export default function ActivityView() {
 
   const getTxsTable = () => {
     return (
-      <div className="space-y-3 max-h-[calc(100vh-360px)] overflow-y-auto pr-2">
+      <div className="space-y-3 max-h-[calc(100vh-420px)] overflow-y-auto pr-2">
         {transactions
           .filter((tx) => {
             if (filter === "all") return true;
