@@ -29,6 +29,7 @@ export interface Transaction {
   txHash: string;
   txHashShort: string;
   value: string;
+  vaultAddress: string;
 }
 
 export interface VaultData {
@@ -40,6 +41,10 @@ export interface VaultData {
   valueGainedUSD: number;
   position: number;
   positionUSD: number;
+  entranceFee: number;
+  exitFee: number;
+  performanceFee: number;
+  managementFee: number;
 }
 
 export interface PositionData {
@@ -55,12 +60,26 @@ export interface PositionData {
 }
 
 export interface VaultDataResponse {
-  vaultData: VaultData;
-  positionData: PositionData;
+  vaultsData: IntegratedDataResponse[];
+  //vaultData: VaultData;
+  //positionData: PositionData;
   activityData: Transaction[];
 }
 
+export interface StaticData {
+  vault_id: string;
+  vault_name: string;
+  vault_symbol: string;
+  vault_address: string;
+  vault_decimals: number;
+  vault_status: string;
+  token_symbol: string;
+  token_address: string;
+  token_decimals: number;
+}
+
 export interface IntegratedDataResponse {
+  staticData: StaticData;
   vaultData: VaultData;
   positionData: PositionData;
 }

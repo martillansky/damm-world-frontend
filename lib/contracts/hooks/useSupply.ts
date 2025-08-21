@@ -25,6 +25,8 @@ export function useSupply() {
   };
 
   const submitSupplyOnSafe = async (
+    tokenAddress: string,
+    tokenDecimals: number,
     amount: string,
     wrapNativeToken: boolean
   ) => {
@@ -36,18 +38,24 @@ export function useSupply() {
       await wrapNativeETH(network.chainId!.toString(), amount);
     }
 
-    const tx = await executeFundSmartAccountWorkflow(amount);
+    const tx = await executeFundSmartAccountWorkflow(
+      tokenAddress,
+      tokenDecimals,
+      amount
+    );
     return tx as unknown as TransactionResponse;
   };
 
   const withdrawSupplyFromSafe = async (
+    tokenAddress: string,
+    tokenDecimals: number,
     amount: string,
     unwrapNativeToken: boolean
   ) => {
     if (!address) throw new Error("No address found");
     if (!safeAddress || isLoading || error) throw new Error("Safe not linked");
 
-    const tx = await executeExitWorkflow(amount);
+    const tx = await executeExitWorkflow(tokenAddress, tokenDecimals, amount);
 
     if (unwrapNativeToken) {
       // Unwrap WETH to native token

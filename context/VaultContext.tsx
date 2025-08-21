@@ -14,8 +14,8 @@ import { useVaultData } from "../lib/api/hooks/VaultData";
 import { useSafeLinkedAccountContext } from "./SafeLinkedAccountContext";
 
 interface VaultContextType {
-  vault: DataPresenter | null;
-  setVault: (vault: DataPresenter | null) => void;
+  vaults: DataPresenter | null;
+  setVaults: (vaults: DataPresenter | null) => void;
   isLoading: boolean;
 }
 
@@ -29,7 +29,7 @@ export function VaultProvider({ children }: VaultProviderProps) {
   const { address } = useAppKitAccount();
   const { safeAddress } = useSafeLinkedAccountContext();
 
-  const [vault, setVault] = useState<DataPresenter | null>(null);
+  const [vaults, setVaults] = useState<DataPresenter | null>(null);
 
   // Check if we have valid addresses
   const hasValidAddresses =
@@ -44,17 +44,17 @@ export function VaultProvider({ children }: VaultProviderProps) {
 
   useEffect(() => {
     if (!hasValidAddresses || isLoading || !address) {
-      setVault(null);
+      setVaults(null);
     } else if (data && address) {
-      setVault(DataWrangler({ data }));
+      setVaults(DataWrangler({ data }));
     }
   }, [isLoading, data, address, hasValidAddresses]);
 
   return (
     <VaultContext.Provider
       value={{
-        vault,
-        setVault,
+        vaults,
+        setVaults,
         isLoading: hasValidAddresses ? isLoading : false,
       }}
     >
@@ -63,10 +63,10 @@ export function VaultProvider({ children }: VaultProviderProps) {
   );
 }
 
-export function useVault() {
+export function useVaults() {
   const context = useContext(VaultContext);
   if (context === undefined) {
-    throw new Error("useVault must be used within a VaultProvider");
+    throw new Error("useVaults must be used within a VaultProvider");
   }
   return context;
 }

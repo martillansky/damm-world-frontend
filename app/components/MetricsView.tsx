@@ -1,6 +1,6 @@
 import ZoomInIcon from "@/app/components/icons/ZoomInIcon";
 import ZoomOutIcon from "@/app/components/icons/ZoomOutIcon";
-import { useVault } from "@/context/VaultContext";
+import { useVaults } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { VaultDataView } from "@/lib/data/types/DataPresenter.types";
 import { useEffect, useMemo, useState } from "react";
@@ -14,11 +14,11 @@ import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 import { mockPerformanceData } from "./ui/mockVaults/MockVaultData";
 
 export default function MetricsView() {
-  const { vault, isLoading } = useVault();
+  const { vaults, isLoading } = useVaults();
   const { isChangingView, setViewLoaded } = useView();
   const vaultData: VaultDataView | undefined = useMemo(
-    () => vault?.vaultData,
-    [vault?.vaultData]
+    () => vaults?.vaultsData[0]?.vaultData,
+    [vaults?.vaultsData]
   );
 
   const { setActions } = useActionSlot();

@@ -1,8 +1,9 @@
 import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { BigNumber, ethers } from "ethers";
+import IERC20ABI from "../abis/IERC20.json";
 import { Call } from "./BatchTxs";
-import { getSignerAndContract } from "./utils";
+import { getEthersProvider, getSignerAndContract } from "./utils";
 
 const WETH_ABI = [
   "function deposit() payable",
@@ -10,12 +11,17 @@ const WETH_ABI = [
 ];
 
 export async function getApproveTx(
-  chainId: string,
   address: string,
   vaultAddress: string,
+  underlyingTokenAddress: string,
   amountInWei: BigNumber
 ): Promise<Call | null> {
-  const { underlyingToken } = await getSignerAndContract(chainId);
+  const provider = getEthersProvider();
+  const underlyingToken = new ethers.Contract(
+    underlyingTokenAddress,
+    IERC20ABI,
+    provider
+  );
 
   const allowance = await underlyingToken.allowance(address, vaultAddress);
 
@@ -35,12 +41,17 @@ export async function getApproveTx(
 }
 
 export async function handleApprove(
-  chainId: string,
   address: string,
   vaultAddress: string,
+  underlyingTokenAddress: string,
   amountInWei: BigNumber
 ) {
-  const { underlyingToken } = await getSignerAndContract(chainId);
+  const provider = getEthersProvider();
+  const underlyingToken = new ethers.Contract(
+    underlyingTokenAddress,
+    IERC20ABI,
+    provider
+  );
 
   const allowance = await underlyingToken.allowance(address, vaultAddress);
 

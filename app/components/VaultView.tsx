@@ -1,19 +1,13 @@
 import ArrowDownIcon from "@/app/components/icons/ArrowDownIcon";
 import ArrowUpIcon from "@/app/components/icons/ArrowUpIcon";
+import { useBalancesContext } from "@/context/BalancesContext";
 import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 import { useTransaction } from "@/context/TransactionContext";
-import { useVault } from "@/context/VaultContext";
+import { useVaults } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
-import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
 import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
 import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
-import {
-  PositionDataView,
-  VaultDataView,
-} from "@/lib/data/types/DataPresenter.types";
-import { getTypedChainId } from "@/lib/utils/chain";
-import { getEnvVars } from "@/lib/utils/env";
-import { useAppKitNetwork } from "@reown/appkit/react";
+import { VaultsDataView } from "@/lib/data/types/DataPresenter.types";
 import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useParams } from "next/navigation";
@@ -36,34 +30,27 @@ import Select from "./ui/common/Select";
 import TokenCard from "./ui/common/TokenCard";
 import WarningCard from "./ui/common/WarningCard";
 import {
-  funds,
   getFilterDisplayLabels,
   getFilterOptions,
   getMockPerformanceData,
-  TokenCardProps,
 } from "./ui/mockVaults/MockVaultData";
 
 export default function VaultView() {
   const { safeAddress, isDeployed } = useSafeLinkedAccountContext();
   const { address } = useParams();
-  const network = useAppKitNetwork();
-  const { vault, isLoading } = useVault();
+  const { vaults, isLoading } = useVaults();
   const queryClient = useQueryClient();
   const { isChangingView, setViewLoaded } = useView();
-  const vaultData: VaultDataView | undefined = useMemo(
-    () => vault?.vaultData,
-    [vault?.vaultData]
+  const vaultsData: VaultsDataView[] | undefined = useMemo(
+    () => vaults?.vaultsData,
+    [vaults?.vaultsData]
   );
-  const positionData: PositionDataView | undefined = useMemo(
-    () => vault?.positionData,
-    [vault?.positionData]
-  );
-  const { submitRedeem } = useWithdraw();
+
+  const { submitRedeem, submitRequestWithdraw } = useWithdraw();
 
   const { showTransaction, updateTransactionStatus, hideTransaction } =
     useTransaction();
   const { submitRequestDeposit } = useDeposit();
-  const { submitRequestWithdraw } = useWithdraw();
 
   const [showDialogFundSelected, setShowDialogFundSelected] = useState(false);
   const [filter, setFilter] = useState("all");
@@ -74,22 +61,17 @@ export default function VaultView() {
 
   const [amount, setAmount] = useState("");
 
-  const {
-    UNDERLYING_TOKEN_SYMB: underlyingTokenSymb,
-    SHARE_TOKEN_SYMB: shareTokenSymb,
-  } = getEnvVars(getTypedChainId(Number(network.chainId)));
-
-  const { getSuppplyBalanceFromSafe, getBalanceFromSafe } = useBalanceOf();
   const [walletBalance, setWalletBalance] = useState<string>("");
+  const { safeBalances } = useBalancesContext();
 
   const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
     useState<string>("");
 
   useEffect(() => {
-    if (!isLoading && vaultData) {
+    if (!isLoading && vaultsData) {
       setViewLoaded();
     }
-  }, [isLoading, vaultData, setViewLoaded]);
+  }, [isLoading, vaultsData, setViewLoaded]);
 
   const handleOperation = (op: VaultActionKey) => {
     setOperation(op);
@@ -106,9 +88,12 @@ export default function VaultView() {
         "Please wait while we process your withdraw completion..."
       );
 
-      const amount = String(positionData!.availableToRedeemRaw);
+      const amount = String(selectedVault!.positionData.availableToRedeemRaw);
       // Execute transaction
-      const tx = await submitRedeem(amount);
+      const tx = await submitRedeem(
+        selectedVault!.staticData.vault_address,
+        amount
+      );
 
       // Update status to pending
       updateTransactionStatus(
@@ -150,7 +135,12 @@ export default function VaultView() {
         );
 
         // Execute transaction
-        const tx = await submitRequestDeposit(amount);
+        const tx = await submitRequestDeposit(
+          selectedVault!.staticData.vault_address,
+          selectedVault!.staticData.token_address,
+          selectedVault!.staticData.token_decimals,
+          amount
+        );
 
         // Update status to pending
         updateTransactionStatus(
@@ -186,7 +176,10 @@ export default function VaultView() {
         );
 
         // Execute transaction
-        const tx = await submitRequestWithdraw(amount);
+        const tx = await submitRequestWithdraw(
+          selectedVault!.staticData.vault_address,
+          amount
+        );
 
         // Update status to pending
         updateTransactionStatus(
@@ -224,32 +217,32 @@ export default function VaultView() {
     queryClient.invalidateQueries({ queryKey: ["vaultData", safeAddress] });
   };
 
-  const [selectedVault, setSelectedVault] = useState<TokenCardProps | null>(
-    null
+  const [selectedVault, setSelectedVault] = useState<VaultsDataView | null>(
+    vaultsData ? vaultsData[0] : null
   );
 
-  const renderTokenCard = (fund: TokenCardProps) => {
-    if (!vaultData) return null;
+  const renderTokenCard = (fund: VaultsDataView) => {
+    if (!fund) return null;
     return (
       <TokenCard
-        key={fund.key}
-        title={`${fund.name}`}
-        subtitle={`${vaultData.aprRaw}% APY (12h avg)`}
-        secondSubtitle={`${vaultData.positionRaw} ${underlyingTokenSymb}`}
+        key={fund.staticData.vault_id}
+        title={`${fund.staticData.vault_name}`}
+        subtitle={`${fund.vaultData.aprRaw}% APY (12h avg)`}
+        secondSubtitle={`${fund.vaultData.positionRaw} ${fund.staticData.token_symbol}`}
         onClick={() => {
           setSelectedVault(fund);
           setShowDialogFundSelected(true);
         }}
         icon={
           <Image
-            src={fund.icon}
-            alt={fund.name}
+            src={fund.staticData.vault_icon}
+            alt={fund.staticData.vault_name}
             className="w-12 h-12 object-cover rounded-full"
             width={32}
             height={32}
           />
         }
-        active={fund.active}
+        active={fund.staticData.vault_status === "open"}
       />
     );
   };
@@ -260,7 +253,7 @@ export default function VaultView() {
         {(operation === "DEPOSIT" || operation === "WITHDRAW") && (
           <Input
             type="number"
-            label={`Amount (${underlyingTokenSymb})`}
+            label={`Amount (${selectedVault?.staticData.token_symbol})`}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             handleMaxClick={handleMaxClick}
@@ -268,8 +261,10 @@ export default function VaultView() {
               <>
                 Max:{" "}
                 {operation === "DEPOSIT"
-                  ? walletBalance + " " + underlyingTokenSymb
-                  : sharesReadyToWithdraw + " " + underlyingTokenSymb}
+                  ? walletBalance + " " + selectedVault?.staticData.token_symbol
+                  : sharesReadyToWithdraw +
+                    " " +
+                    selectedVault?.staticData.token_symbol}
               </>
             }
             placeholder="0.0"
@@ -280,9 +275,11 @@ export default function VaultView() {
           <ObservationCard title="Investing Process">
             Investing in a DAMM fund implies:
             <br />
-            1. Depositing your {underlyingTokenSymb} into the fund.
+            1. Depositing your {selectedVault?.staticData.token_symbol} into the
+            fund.
             <br />
-            2. You&apos;ll receive {shareTokenSymb} shares in your account.
+            2. You&apos;ll receive {selectedVault?.staticData.vault_symbol}{" "}
+            shares in your account.
           </ObservationCard>
         )}
 
@@ -293,8 +290,8 @@ export default function VaultView() {
               <br />
               1. Verify and approve this request for authenticity.
               <br />
-              2. Swap your {shareTokenSymb} shares into {underlyingTokenSymb} in
-              this investment fund.
+              2. Swap your {selectedVault?.staticData.vault_symbol} shares into{" "}
+              {selectedVault?.staticData.token_symbol} in this investment fund.
             </ObservationCard>
 
             <WarningCard title="Withdrawal Disclaimer">
@@ -313,9 +310,11 @@ export default function VaultView() {
   };
 
   useEffect(() => {
-    const fetchUnderlyingBalance = async () => {
+    const fetchUnderlyingBalance = () => {
       try {
-        const balance = await getSuppplyBalanceFromSafe();
+        const balance =
+          safeBalances!.vaultBalances[selectedVault!.staticData.vault_id]
+            .availableSupply;
         setWalletBalance(balance);
       } catch (err) {
         console.warn("Failed to fetch balance:", err);
@@ -323,17 +322,19 @@ export default function VaultView() {
       }
     };
 
-    if (address && !isLoading && address !== "") {
+    if (address && !isLoading && selectedVault && safeBalances) {
       fetchUnderlyingBalance();
     } else {
       setWalletBalance("");
     }
-  }, [getSuppplyBalanceFromSafe, address, isLoading]);
+  }, [address, selectedVault, isLoading, safeBalances]);
 
   useEffect(() => {
-    const fetchSharesReadyToWithdraw = async () => {
+    const fetchSharesReadyToWithdraw = () => {
       try {
-        const balance = await getBalanceFromSafe();
+        const balance =
+          safeBalances!.vaultBalances[selectedVault!.staticData.vault_id]
+            .shares;
         setSharesReadyToWithdraw(balance);
       } catch (err) {
         console.warn("Failed to fetch balance:", err);
@@ -341,19 +342,19 @@ export default function VaultView() {
       }
     };
 
-    if (address && address !== "") {
+    if (address && address !== "" && selectedVault && safeBalances) {
       fetchSharesReadyToWithdraw();
     } else {
       setSharesReadyToWithdraw("");
     }
-  }, [getBalanceFromSafe, address]);
+  }, [address, selectedVault, safeBalances]);
 
-  if (isLoading || isChangingView || !vaultData) {
+  if (isLoading || isChangingView || !vaultsData) {
     return <LoadingComponent text="Loading fund data..." />;
   }
 
   return (
-    vaultData && (
+    vaultsData && (
       <>
         <div className="space-y-4">
           {/* Funds View */}
@@ -369,7 +370,7 @@ export default function VaultView() {
             </div>
 
             <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
-              {funds.map((fund) => renderTokenCard(fund))}
+              {vaultsData.map((fund) => renderTokenCard(fund))}
             </div>
           </div>
 
@@ -424,18 +425,18 @@ export default function VaultView() {
               setOperation(null);
               setSelectedVault(null);
             }}
-            title={`${selectedVault.name}`}
+            title={`${selectedVault.staticData.vault_name}`}
             icon={
               <Image
-                src={selectedVault.icon}
-                alt={selectedVault.name}
+                src={selectedVault.staticData.vault_icon}
+                alt={selectedVault.staticData.vault_name}
                 className="w-12 h-12 object-cover rounded-full"
                 width={32}
                 height={32}
               />
             }
             statusIcon={
-              !selectedVault.active && (
+              selectedVault.staticData.vault_status !== "open" && (
                 <div className="text-right ml-4">
                   <h3 className="bg-white dark:bg-red-400/10 text-red-400 px-2 py-0.5 rounded-md text-xs font-medium border border-red-400/20 drop-shadow-[0_0_1px_rgba(239,68,68,0.3)]">
                     Closed
@@ -449,20 +450,20 @@ export default function VaultView() {
                 <Card variant="small" light>
                   <CardRow
                     left="TVL"
-                    right={vaultData.tvl}
-                    secondaryRight={vaultData.tvlChange}
+                    right={selectedVault.vaultData.tvl}
+                    secondaryRight={selectedVault.vaultData.tvlChange}
                   />
                   <CardRow
                     left="APY (12h avg)"
                     tooltip="Average annual percentage rate based on the last 12 hours of performance."
                     highlightedRight
-                    right={vaultData.apr}
-                    secondaryRight={vaultData.aprChange}
+                    right={selectedVault.vaultData.apr}
+                    secondaryRight={selectedVault.vaultData.aprChange}
                   />
                   <CardRow
                     left="My Deposit"
-                    right={`${vaultData.positionRaw} ${underlyingTokenSymb}`}
-                    secondaryRight={`${vaultData.positionUSD} USD`}
+                    right={`${selectedVault.vaultData.positionRaw} ${selectedVault.staticData.token_symbol}`}
+                    secondaryRight={`${selectedVault.vaultData.positionUSD} USD`}
                   />
                 </Card>
 
@@ -471,31 +472,31 @@ export default function VaultView() {
                   <ObservationCard title="Investment Conditions">
                     <>
                       <CardRow
-                        left={`You can invest in this fund by depositing ${underlyingTokenSymb}`}
+                        left={`You can invest in this fund by depositing ${selectedVault.staticData.token_symbol}`}
                         variant="small"
                         style="observation"
                       />
                       <CardRow
                         left="Entrance fee"
-                        right={selectedVault.entranceFee}
+                        right={selectedVault.vaultData.entranceFee}
                         variant="small"
                         style="bullet"
                       />
                       <CardRow
                         left="Exit fee"
-                        right={selectedVault.exitFee}
+                        right={selectedVault.vaultData.exitFee}
                         variant="small"
                         style="bullet"
                       />
                       <CardRow
                         left="Performance fee"
-                        right={selectedVault.performanceFee}
+                        right={selectedVault.vaultData.performanceFee}
                         variant="small"
                         style="bullet"
                       />
                       <CardRow
                         left="Management fee"
-                        right={selectedVault.managementFee}
+                        right={selectedVault.vaultData.managementFee}
                         variant="small"
                         style="bullet"
                       />
@@ -527,7 +528,7 @@ export default function VaultView() {
                 </>
               ) : (
                 <>
-                  {selectedVault.active && (
+                  {selectedVault.staticData.vault_status === "open" && (
                     <Button
                       onClick={() => handleOperation("DEPOSIT")}
                       disabled={!isDeployed}
@@ -536,18 +537,18 @@ export default function VaultView() {
                       <span>Invest</span>
                     </Button>
                   )}
-                  {(positionData?.availableToRedeemRaw &&
-                    positionData.availableToRedeemRaw > 0) ||
-                  !selectedVault.active ? (
+                  {(selectedVault.positionData.availableToRedeemRaw &&
+                    selectedVault.positionData.availableToRedeemRaw > 0) ||
+                  selectedVault.staticData.vault_status !== "open" ? (
                     <Button
                       onClick={() => handleOperation("REDEEM")}
                       disabled={!isDeployed}
                     >
                       <RedeemIcon />
-                      <span /* className="text-xs" */>
+                      <span>
                         {/* Claim  */}
-                        {positionData?.availableToRedeemRaw}{" "}
-                        {underlyingTokenSymb}
+                        {selectedVault.positionData.availableToRedeemRaw}{" "}
+                        {selectedVault.staticData.token_symbol}
                       </span>
                     </Button>
                   ) : (

@@ -11,6 +11,7 @@ import {
   WagmiProvider,
   type Config,
 } from "wagmi";
+import { BalancesProvider } from "./BalancesContext";
 import Providers from "./Providers";
 import { SafeLinkedAccountProvider } from "./SafeLinkedAccountContext";
 import ServerContent from "./ServerContent";
@@ -99,10 +100,12 @@ function ContextProvider({ children, cookies }: ContextProviderProps) {
           <ViewProvider>
             <SafeLinkedAccountProvider>
               <VaultProvider>
-                <TransactionProvider>
-                  <WalletChangeHandler />
-                  {children}
-                </TransactionProvider>
+                <BalancesProvider>
+                  <TransactionProvider>
+                    <WalletChangeHandler />
+                    {children}
+                  </TransactionProvider>
+                </BalancesProvider>
               </VaultProvider>
             </SafeLinkedAccountProvider>
           </ViewProvider>
