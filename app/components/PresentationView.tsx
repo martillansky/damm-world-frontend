@@ -2,17 +2,13 @@ import { useTheme } from "@/context/ThemeContext";
 import { useView } from "@/context/ViewContext";
 import { useAppKit } from "@reown/appkit/react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
-import ChartCard from "./ui/common/ChartCard";
-import Select from "./ui/common/Select";
-import { mockPerformanceData } from "./ui/mockVaults/MockVaultData";
+import { useEffect } from "react";
+import MetricsView from "./MetricsView";
 
 export default function PresentationView() {
   const { theme } = useTheme();
   const { open } = useAppKit();
   const { setView } = useView();
-  const [filter, setFilter] = useState("all");
   useEffect(() => {
     // Only set view if we're not on the root path
     if (window.location.pathname !== "/") {
@@ -55,30 +51,7 @@ export default function PresentationView() {
             <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
                 <div className="col-span-1 lg:col-span-2 xl:col-span-3 p-3 md:p-4 rounded-2xl">
-                  <ChartCard
-                    title="Fund Performance"
-                    subtitle="Historical performance metrics and trends"
-                    variant="small"
-                    selector={
-                      <Select
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                        options={["all", "WLD/USDC", "WLD/DAI", "WLD/USDT"]}
-                        displayLabels={{
-                          all: "All Funds",
-                          "WLD/USDC": "WLD/USDC",
-                          "WLD/DAI": "WLD/DAI",
-                          "WLD/USDT": "WLD/USDT",
-                        }}
-                        size="small"
-                      />
-                    }
-                  >
-                    <StackedAreaChart
-                      vaultName={filter}
-                      data={mockPerformanceData}
-                    />
-                  </ChartCard>
+                  <MetricsView />
                 </div>
               </div>
             </div>

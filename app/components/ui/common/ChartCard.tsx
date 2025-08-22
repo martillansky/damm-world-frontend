@@ -1,3 +1,4 @@
+import { ChartRangeTypes } from "@/lib/api/types/Snapshots.types";
 import React, { useState } from "react";
 import ViewToggle from "./ViewToggle";
 
@@ -8,6 +9,13 @@ interface ChartCardProps {
   children: React.ReactNode;
   selector?: React.ReactNode;
   light?: boolean;
+  onViewChange?: (viewId: ChartRangeTypes) => void;
+  externalToggle?: {
+    externalToggleOptions: { id: string; label: string }[];
+    externalToggleDisplayLabels: Record<string, string>;
+    externalToggleValue: string;
+    externalToggleOnChange: (value: string) => void;
+  };
 }
 
 const ChartCard = ({
@@ -17,9 +25,11 @@ const ChartCard = ({
   variant = "large",
   selector,
   light = false,
+  onViewChange,
+  externalToggle,
 }: ChartCardProps) => {
-  const [activeView, setActiveView] = useState("24h");
-  const viewOptions = [
+  const [activeView, setActiveView] = useState<ChartRangeTypes>("1m");
+  const viewOptions: { id: ChartRangeTypes; label: string }[] = [
     {
       id: "24h",
       label: "24h",
@@ -68,6 +78,18 @@ const ChartCard = ({
                 {title}
               </h3>
             )}
+            {externalToggle && (
+              <div className="flex items-center gap-2 justify-start w-full">
+                <ViewToggle
+                  views={externalToggle.externalToggleOptions}
+                  activeView={externalToggle.externalToggleValue}
+                  onViewChange={(viewId) => {
+                    externalToggle.externalToggleOnChange(viewId as string);
+                  }}
+                  className="scale-75"
+                />
+              </div>
+            )}
             {selector && (
               <div className="flex items-center gap-2 justify-end w-full">
                 {selector}
@@ -95,7 +117,10 @@ const ChartCard = ({
         <ViewToggle
           views={viewOptions}
           activeView={activeView}
-          onViewChange={setActiveView}
+          onViewChange={(viewId) => {
+            setActiveView(viewId as ChartRangeTypes);
+            onViewChange?.(viewId as ChartRangeTypes);
+          }}
           className="scale-75"
         />
       </div>

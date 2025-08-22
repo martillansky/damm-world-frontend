@@ -1,20 +1,12 @@
+import { ChartDataType } from "@/lib/api/types/Snapshots.types";
 import { curveCardinal } from "@visx/curve";
 import ParentSize from "@visx/responsive/lib/components/ParentSize";
 import { AreaSeries, AreaStack, Axis, Tooltip, XYChart } from "@visx/xychart";
 import React from "react";
-import { DataPoint, VaultData } from "../../ui/mockVaults/MockVaultData";
 
-export default function StackedAreaChart({
-  vaultName,
-  data,
-}: {
-  vaultName: string;
-  data: VaultData[];
-}) {
-  const filteredData =
-    vaultName === "all"
-      ? data
-      : data.filter((vaultData) => vaultData.vault === vaultName);
+export default function StackedAreaChart({ data }: { data: ChartDataType }) {
+  if (!data) return null;
+
   return (
     <ParentSize>
       {({ width, height: parentHeight }) => (
@@ -26,13 +18,13 @@ export default function StackedAreaChart({
           yScale={{ type: "linear" }}
         >
           <AreaStack offset="diverging" curve={curveCardinal} renderLine={true}>
-            {filteredData.map((vaultData) => (
+            {Object.entries(data).map(([vaultId, data]) => (
               <AreaSeries
-                key={vaultData.vault}
-                dataKey={vaultData.vault}
-                data={vaultData.data}
-                xAccessor={(d: DataPoint) => d.date}
-                yAccessor={(d: DataPoint) => d.value}
+                key={vaultId}
+                dataKey={vaultId}
+                data={data}
+                xAccessor={(d: { date: string; value: number }) => d.date}
+                yAccessor={(d: { date: string; value: number }) => d.value}
                 curve={curveCardinal}
                 fillOpacity={0.2}
               />
@@ -43,7 +35,10 @@ export default function StackedAreaChart({
           <Axis key="y" orientation={"right"} numTicks={5} />
           <Tooltip
             renderTooltip={({ tooltipData }) => {
-              const datum = tooltipData?.nearestDatum?.datum as DataPoint;
+              const datum = tooltipData?.nearestDatum?.datum as {
+                date: string;
+                value: number;
+              };
               const vaultKey = tooltipData?.nearestDatum?.key as string;
               return (
                 <div>

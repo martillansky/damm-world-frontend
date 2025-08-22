@@ -12,13 +12,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
 import ChartIcon from "./icons/ChartIcon";
 import RedeemIcon from "./icons/RedeemIcon";
+import MetricsView from "./MetricsView";
 import { BaseActionKey } from "./ui/common/Action";
 import Button from "./ui/common/Button";
 import Card, { CardRow } from "./ui/common/Card";
-import ChartCard from "./ui/common/ChartCard";
 import Dialog, {
   DialogActionButtons,
   DialogContents,
@@ -26,14 +25,8 @@ import Dialog, {
 import Input from "./ui/common/Input";
 import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
-import Select from "./ui/common/Select";
 import TokenCard from "./ui/common/TokenCard";
 import WarningCard from "./ui/common/WarningCard";
-import {
-  getFilterDisplayLabels,
-  getFilterOptions,
-  getMockPerformanceData,
-} from "./ui/mockVaults/MockVaultData";
 
 export default function VaultView() {
   const { safeAddress, isDeployed } = useSafeLinkedAccountContext();
@@ -53,7 +46,7 @@ export default function VaultView() {
   const { submitRequestDeposit } = useDeposit();
 
   const [showDialogFundSelected, setShowDialogFundSelected] = useState(false);
-  const [filter, setFilter] = useState("all");
+
   const [showDialogCharts, setShowDialogCharts] = useState(false);
 
   type VaultActionKey = BaseActionKey & ("DEPOSIT" | "WITHDRAW" | "REDEEM");
@@ -383,24 +376,7 @@ export default function VaultView() {
             title="Fund Performances"
           >
             <DialogContents>
-              <ChartCard
-                variant="small"
-                light
-                selector={
-                  <Select
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                    options={getFilterOptions()}
-                    displayLabels={getFilterDisplayLabels()}
-                    size="small"
-                  />
-                }
-              >
-                <StackedAreaChart
-                  vaultName={filter}
-                  data={getMockPerformanceData()}
-                />
-              </ChartCard>
+              <MetricsView />
             </DialogContents>
             <DialogActionButtons>
               <Button

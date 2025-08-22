@@ -2,10 +2,9 @@ import { useView, View } from "@/context/ViewContext";
 import { useAppKitAccount } from "@reown/appkit/react";
 import ActivityIcon from "../../icons/ActivityIcon";
 //import PositionIcon from "../../icons/PositionIcon";
+import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 import SmartAccountIcon from "../../icons/SmartAccountIcon";
 import VaultIcon from "../../icons/VaultIcon";
-//import VaultPerformanceIcon from "../../icons/VaultPerformanceIcon";
-import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 
 export default function Footer() {
   const { view, setView } = useView();
@@ -26,13 +25,6 @@ export default function Footer() {
             active={view === "smartAccount"}
             onClick={() => handleViewChange("smartAccount")}
           />
-          {/* <FooterButton
-            label="Metrics"
-            icon={<VaultPerformanceIcon />}
-            active={view === "metrics"}
-            onClick={() => handleViewChange("metrics")}
-          /> */}
-          {/* <div className="w-px h-8 bg-border-light dark:bg-zinc-700" /> */}
           <FooterButton
             label="Funds"
             icon={<VaultIcon />}
