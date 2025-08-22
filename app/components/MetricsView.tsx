@@ -167,7 +167,7 @@ export default function MetricsView({
             </Button>
           </div>
           {!showDialogCharts && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="w-full space-y-4">
               {Object.keys(formattedChartData).map((vaultId) =>
                 renderTokenCard(vaultId)
               )}
