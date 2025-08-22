@@ -35,7 +35,7 @@ export function useSupply() {
 
     if (wrapNativeToken) {
       // Wrap native token to WETH: must be triggered by user
-      await wrapNativeETH(network.chainId!.toString(), amount);
+      await wrapNativeETH(tokenAddress, network.chainId!.toString(), amount);
     }
 
     const tx = await executeFundSmartAccountWorkflow(
@@ -60,7 +60,7 @@ export function useSupply() {
     if (unwrapNativeToken) {
       // Unwrap WETH to native token
       await tx.wait();
-      await unwrapWETH(network.chainId!.toString(), amount);
+      await unwrapWETH(tokenAddress, network.chainId!.toString(), amount);
     }
     return tx as unknown as TransactionResponse;
   };

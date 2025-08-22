@@ -17,7 +17,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { BaseActionKey, createActions } from "./ui/common/Action";
 import Button from "./ui/common/Button";
-import Card, { CardRow } from "./ui/common/Card";
+import { CardRow } from "./ui/common/Card";
 import Dialog, {
   DialogActionButtons,
   DialogContents,
@@ -27,6 +27,7 @@ import LoadingComponent from "./ui/common/LoadingComponent";
 import ObservationCard from "./ui/common/ObservationCard";
 import Select from "./ui/common/Select";
 import Toast, { ToastType } from "./ui/common/Toast";
+import TokenCard from "./ui/common/TokenCard";
 import WarningCard from "./ui/common/WarningCard";
 import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
@@ -85,6 +86,9 @@ export default function SmartAccountView() {
   const [selectedVaultId, setSelectedVaultId] = useState<string>(
     vaultsData ? vaultsData[0].staticData.vault_id : ""
   );
+  const [selectedWrapTokenId, setSelectedWrapTokenId] = useState<string>(
+    vaultsData ? vaultsData[0].staticData.vault_id : ""
+  );
   const {
     walletBalances,
     safeBalances,
@@ -110,29 +114,30 @@ export default function SmartAccountView() {
     setShowDialog(false);
     if (operation === "SUPPLY") {
       try {
-        const wrapNativeToken =
-          isUnderlyingWrapNative &&
-          selectedVaultId === underlyingNativeTokenSymb;
-
-        if (wrapNativeToken) {
-          // TODO: FIX! Native token is not in the vaultsData.
-          // Maybe we should give the option to wrap native token only for investing.
-          return;
-        }
-
         // Show the overlay
         showTransaction(
           "Processing Deposit",
           "Please wait while we process your deposit request..."
         );
 
-        const token = vaultsData?.find(
-          (vault) => vault.staticData.vault_id === selectedVaultId
+        const wrapNativeToken =
+          isUnderlyingWrapNative &&
+          selectedVaultId === underlyingNativeTokenSymb;
+
+        const token = vaultsData?.find((vault) =>
+          wrapNativeToken
+            ? vault.staticData.vault_id === selectedWrapTokenId
+            : vault.staticData.vault_id === selectedVaultId
         );
+
+        if (!token) {
+          throw new Error("Token not found");
+        }
+
         // Execute transaction
         const tx = await submitSupplyOnSafe(
-          token!.staticData.token_address,
-          token!.staticData.token_decimals,
+          token.staticData.token_address,
+          token.staticData.token_decimals,
           amount,
           wrapNativeToken
         );
@@ -253,20 +258,82 @@ export default function SmartAccountView() {
   };
 
   const handleSelectionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setShowToast(false);
     if (isUnderlyingWrapNative) {
       if (e.target.value === underlyingNativeTokenSymb) {
         if (operation === "SUPPLY") {
-          setToastMessage("ETH-SEP will be wrapped to WETH-SEP.");
+          setToastMessage(
+            `${underlyingNativeTokenSymb} will be wrapped to ${displayLabels[selectedWrapTokenId]}.`
+          );
+          setToastType("info");
+          setShowToast(true);
         }
       } else {
         if (operation === "EXIT") {
-          setToastMessage("WETH-SEP will be unwrapped to ETH-SEP.");
+          setToastMessage(
+            `${
+              displayLabels[e.target.value]
+            } will be unwrapped to ${underlyingNativeTokenSymb}.`
+          );
+          setToastType("info");
+          setShowToast(true);
         }
       }
-      setToastType("info");
-      setShowToast(true);
     }
     setSelectedVaultId(e.target.value);
+  };
+
+  const handleWrapSelectionChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    if (isUnderlyingWrapNative) {
+      if (operation === "SUPPLY") {
+        setToastMessage(
+          `${underlyingNativeTokenSymb} will be wrapped to ${
+            displayLabels[e.target.value]
+          }.`
+        );
+        setToastType("info");
+        setShowToast(true);
+      }
+    }
+    setSelectedWrapTokenId(e.target.value);
+  };
+
+  const renderTokenCard = (fund: VaultsDataView) => {
+    if (!fund || !safeBalances || !vaultsData) return null;
+    return (
+      <TokenCard
+        key={fund.staticData.vault_id}
+        title={`${fund.staticData.token_symbol}`}
+        //subtitle={`${fund.vaultData.aprRaw}% APY (12h avg)`}
+        //secondSubtitle={`${fund.vaultData.positionRaw} ${fund.staticData.token_symbol}`}
+        //onClick={() => {}}
+        icon={
+          <Image
+            src={fund.staticData.vault_icon}
+            alt={fund.staticData.vault_name}
+            className="w-12 h-12 object-cover rounded-full"
+            width={32}
+            height={32}
+          />
+        }
+        active={fund.staticData.vault_status === "open"}
+      >
+        <CardRow
+          left="Available supply"
+          right={`${
+            safeBalances.vaultBalances[fund.staticData.vault_id].availableSupply
+          } ${fund.staticData.token_symbol}`}
+        />
+        <CardRow
+          left="Your shares"
+          right={`${
+            safeBalances.vaultBalances[fund.staticData.vault_id].shares
+          } ${fund.staticData.vault_symbol}`}
+        />
+      </TokenCard>
+    );
   };
 
   useEffect(() => {
@@ -337,47 +404,11 @@ export default function SmartAccountView() {
     <>
       {isDeployed ? (
         <>
-          {isUnderlyingWrapNative && (
-            <CardRow
-              left="Available native supply"
-              right={`${safeBalances.nativeBalance} ${underlyingNativeTokenSymb}`}
-            />
-          )}
-
-          {vaultsIds.map(
-            (vaultId: string) =>
-              vaultId !== underlyingNativeTokenSymb && (
-                <div key={vaultId}>
-                  <Card
-                    title={`Fund: ${
-                      vaultsData.find(
-                        (vault) => vault.staticData.vault_id === vaultId
-                      )?.staticData.token_symbol
-                    }`}
-                    variant="small"
-                  >
-                    <CardRow
-                      left="Available supply"
-                      right={`${
-                        safeBalances.vaultBalances[vaultId].availableSupply
-                      } ${
-                        vaultsData.find(
-                          (v) => v.staticData.vault_id === vaultId
-                        )?.staticData.token_symbol
-                      }`}
-                    />
-                    <CardRow
-                      left="Your shares"
-                      right={`${safeBalances.vaultBalances[vaultId].shares} ${
-                        vaultsData.find(
-                          (v) => v.staticData.vault_id === vaultId
-                        )?.staticData.vault_symbol
-                      }`}
-                    />
-                  </Card>
-                </div>
-              )
-          )}
+          {vaultsData.map((vault) => (
+            <div key={vault.staticData.vault_id} className="w-full">
+              {renderTokenCard(vault)}
+            </div>
+          ))}
         </>
       ) : (
         <div className="flex flex-col items-center min-h-[calc(100vh-300px)]">
@@ -415,7 +446,13 @@ export default function SmartAccountView() {
             <>
               <Select
                 label="Token"
-                options={vaultsIds}
+                options={
+                  operation === "EXIT"
+                    ? vaultsIds.filter(
+                        (vaultId) => vaultId !== underlyingNativeTokenSymb
+                      )
+                    : vaultsIds
+                }
                 displayLabels={displayLabels}
                 value={selectedVaultId}
                 onChange={handleSelectionChange}
@@ -423,7 +460,7 @@ export default function SmartAccountView() {
 
               <Input
                 type="number"
-                label={`Amount (${displayLabels[selectedVaultId]})`}
+                label={"Amount"}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 handleMaxClick={() => setAmount(maxBalance)}
@@ -438,6 +475,18 @@ export default function SmartAccountView() {
           )}
           {operation === "SUPPLY" && (
             <>
+              {isUnderlyingWrapNative &&
+                selectedVaultId === underlyingNativeTokenSymb && (
+                  <Select
+                    label="Wrap Token"
+                    options={vaultsIds.filter(
+                      (vaultId) => vaultId !== underlyingNativeTokenSymb
+                    )}
+                    displayLabels={displayLabels}
+                    value={selectedWrapTokenId}
+                    onChange={handleWrapSelectionChange}
+                  />
+                )}
               <WarningCard title="Disclaimer">
                 You will be able to:
                 <br />- Deposit {displayLabels[selectedVaultId]} tokens and

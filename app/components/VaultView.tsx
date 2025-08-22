@@ -219,7 +219,7 @@ export default function VaultView() {
     return (
       <TokenCard
         key={fund.staticData.vault_id}
-        title={`${fund.staticData.vault_name}`}
+        title={`${fund.staticData.token_symbol}`}
         subtitle={`${fund.vaultData.aprRaw}% APY (12h avg)`}
         secondSubtitle={`${fund.vaultData.positionRaw} ${fund.staticData.token_symbol}`}
         onClick={() => {
@@ -246,7 +246,7 @@ export default function VaultView() {
         {(operation === "DEPOSIT" || operation === "WITHDRAW") && (
           <Input
             type="number"
-            label={`Amount (${selectedVault?.staticData.token_symbol})`}
+            label={"Amount"}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             handleMaxClick={handleMaxClick}
@@ -401,7 +401,7 @@ export default function VaultView() {
               setOperation(null);
               setSelectedVault(null);
             }}
-            title={`${selectedVault.staticData.vault_name}`}
+            title={`${selectedVault.staticData.token_symbol}`}
             icon={
               <Image
                 src={selectedVault.staticData.vault_icon}

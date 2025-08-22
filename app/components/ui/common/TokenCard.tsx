@@ -75,16 +75,17 @@ const TokenCard = ({
               </div>
             </div>
 
-            <div className="text-right">
-              <h3 className="text-sm text-muted-light dark:text-muted font-medium pt-1">
-                My deposit
-              </h3>
-              {secondSubtitle && (
+            {secondSubtitle && (
+              <div className="text-right">
+                <h3 className="text-sm text-muted-light dark:text-muted font-medium pt-1">
+                  My deposit
+                </h3>
+
                 <p className="text-sm text-muted-light dark:text-muted">
                   {secondSubtitle}
                 </p>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 

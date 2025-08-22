@@ -26,5 +26,6 @@ export interface ChartDataType {
     date: string;
     value: number;
     label: string;
+    metric: "hours" | "days";
   }[];
 }

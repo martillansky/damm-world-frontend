@@ -39,7 +39,6 @@ export default function MetricsView() {
     const reducedChartData: ChartDataType = chartData.reduce(
       (acc, vaultData) => {
         const date = vaultData.event_timestamp;
-        //const date = new Date(vaultData.event_timestamp).toLocaleDateString();
         const value =
           dataFilter === "total_assets"
             ? Number(
@@ -59,6 +58,7 @@ export default function MetricsView() {
           date,
           value,
           label: vaultData.deposit_token_symbol,
+          metric: range === "24h" ? "hours" : "days",
         });
         return acc;
       },
