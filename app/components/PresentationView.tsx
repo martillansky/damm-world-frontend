@@ -9,6 +9,7 @@ export default function PresentationView() {
   const { theme } = useTheme();
   const { open } = useAppKit();
   const { setView } = useView();
+
   useEffect(() => {
     // Only set view if we're not on the root path
     if (window.location.pathname !== "/") {
@@ -51,14 +52,14 @@ export default function PresentationView() {
             <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
                 <div className="col-span-1 lg:col-span-2 xl:col-span-3 p-3 md:p-4 rounded-2xl">
-                  <MetricsView />
+                  <MetricsView presentation />
                 </div>
               </div>
             </div>
 
             {/* CTA Section */}
             <div className="text-center space-y-3">
-              <div className="flex justify-center mt-16">
+              <div className="flex justify-center mt-8">
                 <button
                   onClick={() => open({ view: "Connect" })}
                   className="px-6 py-2.5 rounded-lg bg-white dark:bg-black text-black dark:text-white text-sm font-medium hover:opacity-90 transition-all duration-200 shadow-[0_0_15px_rgba(163,230,53,0.3)]"
