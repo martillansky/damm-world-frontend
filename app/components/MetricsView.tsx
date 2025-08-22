@@ -5,6 +5,7 @@ import {
 } from "@/lib/api/types/Snapshots.types";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { Suspense, useEffect, useState } from "react";
+import { formatUnits } from "viem";
 import StackedAreaChart from "./charts/Visx-XYChart/StackedAreaChart";
 import ChartCard from "./ui/common/ChartCard";
 import LoadingComponent from "./ui/common/LoadingComponent";
@@ -38,9 +39,15 @@ export default function MetricsView() {
     const reducedChartData: ChartDataType = chartData.reduce(
       (acc, vaultData) => {
         const date = vaultData.event_timestamp;
+        //const date = new Date(vaultData.event_timestamp).toLocaleDateString();
         const value =
           dataFilter === "total_assets"
-            ? vaultData.total_assets
+            ? Number(
+                formatUnits(
+                  BigInt(vaultData.total_assets),
+                  vaultData.deposit_token_decimals
+                )
+              )
             : vaultData.apy;
         const vaultId = vaultData.vault_id;
 
@@ -48,7 +55,11 @@ export default function MetricsView() {
           acc[vaultId] = [];
         }
 
-        acc[vaultId].push({ date, value });
+        acc[vaultId].push({
+          date,
+          value,
+          label: vaultData.deposit_token_symbol,
+        });
         return acc;
       },
       {} as ChartDataType

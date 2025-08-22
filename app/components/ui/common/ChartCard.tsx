@@ -69,7 +69,10 @@ const ChartCard = ({
   const containerBodySmall = "space-y-2";
 
   return (
-    <section className={variant === "large" ? sectionLarge : sectionSmall}>
+    <section
+      className={variant === "large" ? sectionLarge : sectionSmall}
+      style={{ position: "relative", zIndex: 1 }}
+    >
       <div className={variant === "large" ? containerLarge : containerSmall}>
         <div className="mb-1">
           <div className="flex items-center w-full">
@@ -113,7 +116,7 @@ const ChartCard = ({
         </div>
       </div>
       {/* Fixed View Toggle */}
-      <div className="fixed justify-center">
+      <div className="fixed justify-center" style={{ zIndex: 1 }}>
         <ViewToggle
           views={viewOptions}
           activeView={activeView}
