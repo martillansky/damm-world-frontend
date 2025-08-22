@@ -9,4 +9,8 @@ export const mockedVaultData: VaultData = {
   valueGainedUSD: 25.5,
   position: 200,
   positionUSD: 412.0,
+  entranceFee: 0.001,
+  exitFee: 0.001,
+  performanceFee: 0.001,
+  managementFee: 0.001,
 };
