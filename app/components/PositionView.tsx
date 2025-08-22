@@ -1,6 +1,6 @@
-import { useVault } from "@/context/VaultContext";
+import { useVaults } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
-import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
+//import { useWithdraw } from "@/lib/contracts/hooks/useWithdraw";
 import { PositionDataView } from "@/lib/data/types/DataPresenter.types";
 import { useEffect, useMemo, useState } from "react";
 /* import ArrowDownIcon from "./icons/ArrowDownIcon";
@@ -23,14 +23,14 @@ import { useActionSlot } from "./ui/layout/ActionSlotProvider";
 
 export default function PositionView() {
   const { safeAddress } = useSafeLinkedAccountContext();
-  const { vault, isLoading } = useVault();
+  const { vaults, isLoading } = useVaults();
   const queryClient = useQueryClient();
   const { isChangingView, setViewLoaded } = useView();
   const positionData: PositionDataView | undefined = useMemo(
-    () => vault?.positionData,
-    [vault?.positionData]
+    () => vaults?.vaultsData[0]?.positionData,
+    [vaults?.vaultsData]
   );
-  const { submitRedeem } = useWithdraw();
+  //const { submitRedeem } = useWithdraw();
   const { showTransaction, updateTransactionStatus, hideTransaction } =
     useTransaction();
   const { setActions } = useActionSlot();
@@ -63,7 +63,10 @@ export default function PositionView() {
         );
 
         // Execute transaction
-        const tx = await submitRedeem(amount);
+        //const tx = await submitRedeem(amount);
+        const tx = {
+          wait: async () => {},
+        }; // TODO: Add transaction
 
         // Update status to pending
         updateTransactionStatus(

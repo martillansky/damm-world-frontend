@@ -1,6 +1,4 @@
-import { useBalanceOf } from "@/lib/contracts/hooks/useBalanceOf";
 import { useGetVaultDataDirectly } from "@/lib/data";
-import { getTypedChainId } from "@/lib/utils/chain";
 import { getEnvVars } from "@/lib/utils/env";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { useQuery } from "@tanstack/react-query";
@@ -14,10 +12,10 @@ import { convertActivityData } from "../utils/ActivityDataConverter";
 import {
   convertIntegratedPosition,
   getNullMockedIntegratedPosition,
+  IntegratedPosition,
 } from "../utils/IntegratedPositionConverter";
 
 export function useVaultData(wallet: string) {
-  const { getUnderlyingTokenDecimals, getBalanceFromSafe } = useBalanceOf();
   const { getVaultDataDirectly } = useGetVaultDataDirectly();
   const network = useAppKitNetwork();
 
@@ -30,14 +28,11 @@ export function useVaultData(wallet: string) {
       }
       try {
         //throw new Error("test");
-        const vaultAddress = getEnvVars(
-          getTypedChainId(Number(network.chainId))
-        ).VAULT_ADDRESS;
 
         const integratedPositionResponse = await fetch(
           `${
             getEnvVars().API_GATEWAY
-          }/lagoon/integrated/test/${wallet}/${vaultAddress}?offset=0&limit=10&chain_id=${
+          }/lagoon/integrated/test/${wallet}?offset=0&limit=10&chain_id=${
             network.chainId
           }`
         );
@@ -45,25 +40,23 @@ export function useVaultData(wallet: string) {
           throw new Error("Failed to fetch vault data");
 
         let vaultData = await integratedPositionResponse.json();
+        vaultData.positions.forEach((p: IntegratedPosition, i: number) => {
+          p.token_symbol = `${p.token_symbol}(${i + 1})`;
+          p.entrance_fee = 0;
+          p.exit_fee = 0;
+        });
         if (vaultData.positions.length === 0) {
           console.warn("No positions found");
           vaultData = getNullMockedIntegratedPosition();
         }
 
-        const underlyingTokenDecimals = await getUnderlyingTokenDecimals();
-        const integratedPositionData: IntegratedDataResponse =
-          convertIntegratedPosition(
-            vaultData,
-            //Number(await getBalanceOf()),
-            Number(await getBalanceFromSafe()),
-            //Number(shares),
-            underlyingTokenDecimals
-          );
+        const integratedPositionData: IntegratedDataResponse[] =
+          convertIntegratedPosition(vaultData);
 
         const txsResponse = await fetch(
           `${
             getEnvVars().API_GATEWAY
-          }/lagoon/txs/test/${wallet}/${vaultAddress}?offset=0&limit=10&chain_id=${
+          }/lagoon/txs/test/${wallet}?offset=0&limit=10&chain_id=${
             network.chainId
           }`
         );
@@ -71,12 +64,12 @@ export function useVaultData(wallet: string) {
 
         const activityData: Transaction[] = convertActivityData(
           (await txsResponse.json()).txs,
-          underlyingTokenDecimals
+          //underlyingTokenDecimals
+          18
         );
 
         const data: VaultDataResponse = {
-          vaultData: integratedPositionData.vaultData,
-          positionData: integratedPositionData.positionData,
+          vaultsData: integratedPositionData,
           activityData: activityData,
         };
 

@@ -1,6 +1,6 @@
 import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext";
 import { useTransaction } from "@/context/TransactionContext";
-import { useVault } from "@/context/VaultContext";
+import { useVaults } from "@/context/VaultContext";
 import { useView } from "@/context/ViewContext";
 import { Transaction } from "@/lib/api/types/VaultData.types";
 import { useDeposit } from "@/lib/contracts/hooks/useDeposit";
@@ -26,14 +26,14 @@ import WarningCard from "./ui/common/WarningCard";
 export default function ActivityView() {
   const { safeAddress } = useSafeLinkedAccountContext();
   const { chainId } = useAppKitNetwork();
-  const { vault, isLoading } = useVault();
+  const { vaults, isLoading } = useVaults();
   const queryClient = useQueryClient();
   const { cancelDepositRequest } = useDeposit();
   const { isChangingView, setViewLoaded } = useView();
   const [filter, setFilter] = useState("all");
   const transactions = useMemo(
-    () => vault?.activityData ?? [],
-    [vault?.activityData]
+    () => vaults?.activityData ?? [],
+    [vaults?.activityData]
   );
   const { showTransaction, updateTransactionStatus, hideTransaction } =
     useTransaction();
@@ -41,7 +41,14 @@ export default function ActivityView() {
   const [cancelRequested, setCancelRequested] = useState<{
     txId: string;
     status: string;
+    vaultAddress: string;
   } | null>(null);
+
+  const safeAddressShort =
+    safeAddress?.slice(0, 6) + "..." + safeAddress?.slice(-4);
+  const explorerLink = `${
+    getEnvVars(getTypedChainId(Number(chainId))).BLOCK_EXPLORER_GATEWAY
+  }/address/${safeAddress}`;
 
   const isCancelRequested = (txId: string) => {
     // Allows to hide the cancel button after the transaction is confirmed, waiting for indexer to update the status
@@ -50,7 +57,7 @@ export default function ActivityView() {
     );
   };
 
-  const handleCancelDeposit = async () => {
+  const handleCancelDeposit = async (vaultAddress: string) => {
     setShowDialog(false);
     try {
       // Show the overlay
@@ -60,7 +67,7 @@ export default function ActivityView() {
       );
 
       // Execute transaction
-      const tx = await cancelDepositRequest();
+      const tx = await cancelDepositRequest(vaultAddress);
       // Update status to pending
       updateTransactionStatus(
         "pending",
@@ -122,7 +129,11 @@ export default function ActivityView() {
         <button
           onClick={() => {
             setShowDialog(true);
-            setCancelRequested({ txId: tx.id, status: "pending" });
+            setCancelRequested({
+              txId: tx.id,
+              status: "pending",
+              vaultAddress: tx.vaultAddress,
+            });
           }}
           className="p-1.5 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors border-2 border-red-500/80 hover:border-red-500"
         >
@@ -156,7 +167,7 @@ export default function ActivityView() {
 
   const getTxsTable = () => {
     return (
-      <div className="space-y-3 max-h-[calc(100vh-360px)] overflow-y-auto pr-2">
+      <div className="space-y-3 max-h-[calc(100vh-415px)] overflow-y-auto pr-2">
         {transactions
           .filter((tx) => {
             if (filter === "all") return true;
@@ -226,7 +237,7 @@ export default function ActivityView() {
     );
   };
 
-  if (isLoading || isChangingView || !vault || !vault.activityData) {
+  if (isLoading || isChangingView || !vaults || !vaults.activityData) {
     return <LoadingComponent text="Loading activity data..." />;
   }
 
@@ -234,39 +245,54 @@ export default function ActivityView() {
     transactions && (
       <>
         <Card
-          title="Recent Activity"
+          title="DAMM Account"
           variant="small"
-          subtitle="Transaction activity for this investment fund"
           selector={
-            <Select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              options={[
-                "all",
-                "cancellable",
-                "deposit",
-                "withdraw",
-                "claim",
-                "redeem",
-                "claim_and_redeem",
-                "transfers",
-              ]}
-              displayLabels={{
-                all: "All Activities",
-                cancellable: "Cancellable",
-                deposit: "Deposits",
-                withdraw: "Withdraws",
-                claim: "Claims",
-                redeem: "Redeems",
-                claim_and_redeem: "Claim & Redeem",
-                transfers: "Transfers",
-              }}
-              size="small"
-            />
+            <a
+              href={explorerLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-lime-400 hover:underline drop-shadow-[0_0_1px_rgba(163,230,53,0.3)]"
+            >
+              {safeAddressShort}
+            </a>
           }
-        >
-          {getTxsTable()}
-        </Card>
+        />
+        <div className="relative -top-3">
+          <Card
+            //title="Transaction Activity"
+            variant="small"
+            selector={
+              <Select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                options={[
+                  "all",
+                  "cancellable",
+                  "deposit",
+                  "withdraw",
+                  "claim",
+                  "redeem",
+                  "claim_and_redeem",
+                  "transfers",
+                ]}
+                displayLabels={{
+                  all: "All Activities",
+                  cancellable: "Cancellable",
+                  deposit: "Deposits",
+                  withdraw: "Withdraws",
+                  claim: "Claims",
+                  redeem: "Redeems",
+                  claim_and_redeem: "Claim & Redeem",
+                  transfers: "Transfers",
+                }}
+                size="small"
+              />
+            }
+          >
+            {getTxsTable()}
+          </Card>
+        </div>
 
         {/* Dialog */}
         <Dialog
@@ -288,7 +314,13 @@ export default function ActivityView() {
             <Button variant="secondary" onClick={() => setShowDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCancelDeposit}>Confirm</Button>
+            <Button
+              onClick={() =>
+                handleCancelDeposit(cancelRequested?.vaultAddress || "")
+              }
+            >
+              Confirm
+            </Button>
           </DialogActionButtons>
         </Dialog>
       </>

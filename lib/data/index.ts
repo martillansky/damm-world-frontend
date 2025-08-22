@@ -5,7 +5,7 @@ import {
   VaultData,
   VaultDataResponse,
 } from "../api/types/VaultData.types";
-import { useBalanceOf } from "../contracts/hooks/useBalanceOf";
+//import { useBalanceOf } from "../contracts/hooks/useBalanceOf";
 import { useRedeemableAssets } from "../contracts/hooks/useRedeemableAssets";
 import { useRetrieveTxs } from "../contracts/hooks/useRetrieveTxs";
 import { useSharesReadyToClaim } from "../contracts/hooks/useSharesReadyToClaim";
@@ -15,7 +15,7 @@ import { formatTimestamp } from "./utils/utils";
 
 export function useGetVaultDataDirectly() {
   const { getTVL } = useTVL();
-  const { getBalanceOf } = useBalanceOf();
+  //const { getBalanceOf } = useBalanceOf();
   const { getSharesReadyToClaim } = useSharesReadyToClaim();
   const { getRedeemableAssets } = useRedeemableAssets();
   const { getRecentTxs } = useRetrieveTxs();
@@ -31,7 +31,8 @@ export function useGetVaultDataDirectly() {
     try {
       const tvl = Number(await getTVL());
       tvlUSD = tvl * wldConversionRate;
-      userBalance = Number(await getBalanceOf());
+      //userBalance = Number(await getBalanceOf());
+      userBalance = 0; // TODO: Add user balance
       sharesReadyToClaim = Number(await getSharesReadyToClaim());
       redeemableAssets = Number(await getRedeemableAssets());
 
@@ -51,6 +52,10 @@ export function useGetVaultDataDirectly() {
         valueGainedUSD: 0,
         position: 0,
         positionUSD: 0,
+        entranceFee: 0,
+        exitFee: 0,
+        performanceFee: 0,
+        managementFee: 0,
       };
     }
     return {
@@ -62,6 +67,10 @@ export function useGetVaultDataDirectly() {
       valueGainedUSD: 0,
       position,
       positionUSD,
+      entranceFee: 0,
+      exitFee: 0,
+      performanceFee: 0,
+      managementFee: 0,
     };
   };
 
@@ -142,6 +151,7 @@ export function useGetVaultDataDirectly() {
           value: `+$${value.toString()}`,
           timestamp: tx.timestamp ? formatTimestamp(Number(tx.timestamp)) : "",
           rawTs: tx.timestamp ? Number(tx.timestamp) : 0,
+          vaultAddress: "0x", //tx.vaultAddress, // TODO: Add vault address
         };
       });
     } catch {
@@ -159,8 +169,23 @@ export function useGetVaultDataDirectly() {
       const activityData = await getActivityData();
 
       return {
-        vaultData,
-        positionData,
+        vaultsData: [
+          {
+            staticData: {
+              vault_id: "1",
+              vault_name: "Vault 1",
+              vault_symbol: "V1",
+              vault_address: "0x123",
+              vault_decimals: 18,
+              vault_status: "open",
+              token_symbol: "T1",
+              token_address: "0x123",
+              token_decimals: 18,
+            },
+            vaultData: vaultData,
+            positionData: positionData,
+          },
+        ],
         activityData,
       };
     } catch (error) {

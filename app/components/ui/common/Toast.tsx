@@ -58,7 +58,7 @@ export default function Toast({
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
+    <div className="fixed top-4 right-4 z-50 animate-fade-in">
       <div
         className={`flex items-center gap-2 px-4 py-3 rounded-xl ${getBackgroundColor()} backdrop-blur-sm border border-border-light dark:border-zinc-800 shadow-lg`}
       >

@@ -2,8 +2,10 @@ import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext"
 import { TransactionResponse } from "@ethersproject/providers";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { SafeTransactionDataPartial } from "@safe-global/types-kit";
+import { Contract } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { useAccount } from "wagmi";
+import VaultABI from "../abis/Vault.json";
 import { getSignerAndContract } from "../utils/utils";
 
 export function useWithdraw() {
@@ -12,22 +14,25 @@ export function useWithdraw() {
   const { safeAddress, isLoading, error, executeSafeTransaction } =
     useSafeLinkedAccountContext();
 
-  const submitRedeem = async (amount: string) => {
+  const submitRedeem = async (vaultAddress: string, amount: string) => {
     if (!address || !network.chainId) throw new Error("Failed connection");
     if (!safeAddress || isLoading || error) throw new Error("Safe not linked");
 
-    const { vault } = await getSignerAndContract(
-      network.chainId?.toString() ?? ""
-    );
+    const chainId = network.chainId?.toString() ?? "";
+    const { signer } = await getSignerAndContract(chainId);
 
     const amountInWei = parseEther(amount);
 
     const txs: SafeTransactionDataPartial[] = [];
 
     const redeemCall = {
-      to: vault.address,
+      to: vaultAddress,
       value: "0",
-      data: vault.interface.encodeFunctionData("redeem", [
+      data: new Contract(
+        vaultAddress,
+        VaultABI,
+        signer
+      ).interface.encodeFunctionData("redeem", [
         amountInWei,
         safeAddress,
         safeAddress,
@@ -46,11 +51,11 @@ export function useWithdraw() {
 
   // This should be used instead of submitRequestWithdraw only if the vault
   // has closed state. This is a synchronous operation.
-  const submitWithdraw = async (amount: string) => {
+  const submitWithdraw = async (vaultAddress: string, amount: string) => {
     if (!address || !network.chainId) throw new Error("Failed connection");
     if (!safeAddress || isLoading || error) throw new Error("Safe not linked");
 
-    const { vault } = await getSignerAndContract(
+    const { signer } = await getSignerAndContract(
       network.chainId?.toString() ?? ""
     );
 
@@ -59,9 +64,13 @@ export function useWithdraw() {
     const txs: SafeTransactionDataPartial[] = [];
 
     const withdrawCall = {
-      to: vault.address,
+      to: vaultAddress,
       value: "0",
-      data: vault.interface.encodeFunctionData("withdraw", [
+      data: new Contract(
+        vaultAddress,
+        VaultABI,
+        signer
+      ).interface.encodeFunctionData("withdraw", [
         amountInWei,
         safeAddress,
         safeAddress,
@@ -78,11 +87,14 @@ export function useWithdraw() {
     }
   };
 
-  const submitRequestWithdraw = async (amount: string) => {
+  const submitRequestWithdraw = async (
+    vaultAddress: string,
+    amount: string
+  ) => {
     if (!address || !network.chainId) throw new Error("Failed connection");
     if (!safeAddress || isLoading || error) throw new Error("Safe not linked");
 
-    const { vault } = await getSignerAndContract(
+    const { signer } = await getSignerAndContract(
       network.chainId?.toString() ?? ""
     );
 
@@ -91,9 +103,13 @@ export function useWithdraw() {
     const txs: SafeTransactionDataPartial[] = [];
 
     const claimSharesAndRequestRedeemCall = {
-      to: vault.address,
+      to: vaultAddress,
       value: "0",
-      data: vault.interface.encodeFunctionData("claimSharesAndRequestRedeem", [
+      data: new Contract(
+        vaultAddress,
+        VaultABI,
+        signer
+      ).interface.encodeFunctionData("claimSharesAndRequestRedeem", [
         amountInWei,
       ]),
     };

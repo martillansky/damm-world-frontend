@@ -117,11 +117,13 @@ export function useRetrieveTxs() {
             isSettled,
             isCanceled,
             timestamp: block.timestamp,
+            vaultAddress: vault.address,
           } as TransactionResponse & {
             functionName: string;
             args: Result;
             isSettled: boolean;
             isCanceled: boolean;
+            vaultAddress: string;
           };
         })
       );

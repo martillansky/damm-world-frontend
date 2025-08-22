@@ -9,7 +9,6 @@ import {
   SafeTransaction,
   SafeTransactionDataPartial,
 } from "@safe-global/types-kit";
-import { formatUnits } from "ethers/lib/utils";
 import { useEffect, useState } from "react";
 import {
   Chain,
@@ -28,20 +27,13 @@ import {
   isERC20Approved,
 } from "../utils/protocols/eip2612";
 import { getContractNetworks } from "../utils/protocols/gnosis";
-import {
-  getDeterministicSaltNonce,
-  getEthersProvider,
-  getSignerAndContract,
-} from "../utils/utils";
-import { useSafeBalances } from "./useSafeBalances";
+import { getDeterministicSaltNonce, getEthersProvider } from "../utils/utils";
 
 interface SafeLinkedAccountState {
   safeAddress: string | null;
   isDeployed: boolean;
   isLoading: boolean;
   error: Error | null;
-  availableSupply: string;
-  shares: string;
 }
 
 export function useSafeLinkedAccount() {
@@ -57,15 +49,11 @@ export function useSafeLinkedAccount() {
     isDeployed: false,
     isLoading: false,
     error: null,
-    availableSupply: "0",
-    shares: "0",
   });
   const [safeSDK, setSafeSDK] = useState<Safe | null>(null);
   const [client, setClient] = useState<WalletClient | null>(null);
 
   // Use React Query for balance polling
-  const { data: balances } = useSafeBalances(state.safeAddress || undefined);
-
   const isSafeInitialized = async () => {
     if (!address || !network.chainId || !safeSDK) return false;
 
@@ -148,38 +136,12 @@ export function useSafeLinkedAccount() {
       }
 
       setSafeSDK(sdk);
-
       setClient(client);
-      const { underlyingToken, vault, tokenMetadata } =
-        await getSignerAndContract(chain.id.toString());
-      const [availableSupply, shares] = isDeployed
-        ? publicClient
-          ? await Promise.all([
-              publicClient?.readContract({
-                address: underlyingToken.address as `0x${string}`,
-                abi: underlyingToken.interface.fragments,
-                functionName: "balanceOf",
-                args: [safeAddress],
-              }) as unknown as bigint,
-              publicClient?.readContract({
-                address: vault.address as `0x${string}`,
-                abi: vault.interface.fragments,
-                functionName: "balanceOf",
-                args: [safeAddress],
-              }) as unknown as bigint,
-            ])
-          : await Promise.all([
-              underlyingToken.balanceOf(safeAddress),
-              vault.balanceOf(safeAddress),
-            ])
-        : [0, 0];
       setState({
         safeAddress,
         isDeployed,
         isLoading: false,
         error: null,
-        availableSupply: formatUnits(availableSupply, tokenMetadata.decimals),
-        shares: formatUnits(shares, tokenMetadata.decimals),
       });
     } catch (error) {
       console.log("ERROR INITIALIZING SAFE", error);
@@ -190,8 +152,6 @@ export function useSafeLinkedAccount() {
         isDeployed: false,
         isLoading: false,
         error: error as Error,
-        availableSupply: "0",
-        shares: "0",
       });
     }
   };
@@ -200,25 +160,27 @@ export function useSafeLinkedAccount() {
     if (address && network.chainId && walletClient) initializeSafe();
   }, [address, network.chainId, walletClient]);
 
-  const executeFundSmartAccountWorkflow = async (amount: string) => {
+  const executeFundSmartAccountWorkflow = async (
+    tokenAddress: string,
+    tokenDecimals: number,
+    amount: string
+  ) => {
     if (!safeSDK || !state.safeAddress || !client)
       throw new Error("Safe not ready");
     if (!address || !network.chainId) throw new Error("Failed connection");
 
     const txs: SafeTransactionDataPartial[] = [];
-    const chainId = network.chainId.toString();
-    const { underlyingToken, tokenMetadata } = await getSignerAndContract(
-      chainId
-    );
 
-    const amountInWei = parseUnits(amount, tokenMetadata.decimals);
+    const amountInWei = parseUnits(amount, tokenDecimals);
+
+    await executeApproveSafeSpender(tokenAddress, amountInWei);
 
     // Transfer tokens from user to safe if the one time approval is done
     const transferFromTx = getERC20TransferFromTx({
       from: address,
       to: state.safeAddress,
       amount: amountInWei,
-      token: underlyingToken.address,
+      token: tokenAddress,
     });
     if (transferFromTx) txs.push(transferFromTx);
 
@@ -255,27 +217,28 @@ export function useSafeLinkedAccount() {
     }
   };
 
-  const executeApproveSafeSpender = async () => {
+  const executeApproveSafeSpender = async (
+    tokenAddress: string,
+    amount?: bigint
+  ) => {
     if (!safeSDK || !state.safeAddress || !client)
       throw new Error("Safe not ready");
     if (!address || !network.chainId) throw new Error("Failed connection");
 
     const signer = getEthersProvider().getSigner();
 
-    const chainId = network.chainId.toString();
-    const { underlyingToken } = await getSignerAndContract(chainId);
-
     // Allows to update user's allowance on token contract to transfer tokens from user to safe
     const isERC20ApprovalRequired = !(await isERC20Approved({
-      token: underlyingToken.address,
+      token: tokenAddress,
       owner: address,
       spender: state.safeAddress,
       publicClient: publicClient!,
+      amount: amount,
     }));
 
     if (isERC20ApprovalRequired) {
       const erc20ApproveTx = getERC20ApproveTx({
-        token: underlyingToken.address,
+        token: tokenAddress,
         spender: state.safeAddress,
       });
       if (!erc20ApproveTx) throw new Error("ERC20 approve tx not found");
@@ -289,7 +252,8 @@ export function useSafeLinkedAccount() {
     if (!safeSDK || !client) throw new Error("Safe not ready");
     if (!address || !chain) throw new Error("Failed connection");
 
-    await executeApproveSafeSpender();
+    // We would need to approve for each underlying token, it is better to do it in each fund workflow
+    //await executeApproveSafeSpender();
 
     const tx = await safeSDK.createSafeDeploymentTransaction();
     const txHash = await client.sendTransaction({
@@ -313,24 +277,23 @@ export function useSafeLinkedAccount() {
     };
   };
 
-  const executeExitWorkflow = async (amount: string) => {
+  const executeExitWorkflow = async (
+    tokenAddress: string,
+    tokenDecimals: number,
+    amount: string
+  ) => {
     if (!safeSDK || !state.safeAddress || !client)
       throw new Error("Safe not ready");
     if (!address || !network.chainId) throw new Error("Failed connection");
 
     const txs: SafeTransactionDataPartial[] = [];
-    const chainId = network.chainId.toString();
-    const { tokenMetadata, underlyingToken } = await getSignerAndContract(
-      chainId
-    );
-
-    const amountInWei = parseUnits(amount, tokenMetadata.decimals);
+    const amountInWei = parseUnits(amount, tokenDecimals);
 
     // Transfer amountInWei from safe to user
     const transferFromTx = getERC20TransferTx({
       to: address,
       amount: amountInWei,
-      token: underlyingToken.address,
+      token: tokenAddress,
     });
     if (transferFromTx) txs.push(transferFromTx);
 
@@ -342,17 +305,6 @@ export function useSafeLinkedAccount() {
       throw new Error("Safe not deployed, cannot execute exit workflow");
     }
   };
-
-  // Update state when balances change from React Query
-  useEffect(() => {
-    if (balances) {
-      setState((prev) => ({
-        ...prev,
-        availableSupply: balances.availableSupply,
-        shares: balances.shares,
-      }));
-    }
-  }, [balances]);
 
   return {
     ...state,

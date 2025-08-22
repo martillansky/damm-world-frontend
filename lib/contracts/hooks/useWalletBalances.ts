@@ -6,58 +6,43 @@ import { useQuery } from "@tanstack/react-query";
 import { Abi, Address, formatUnits, MulticallParameters } from "viem";
 import { usePublicClient } from "wagmi";
 import IERC20ABI from "../abis/IERC20.json";
-import VaultABI from "../abis/VaultForked.json";
 import { getEthersProvider } from "../utils/utils";
-import { useSafeLinkedAccount } from "./useSafeLinkedAccount";
 
-export interface SafeBalances {
+export interface WalletBalances {
   nativeBalance: string;
-  vaultBalances: {
+  vaultTokenBalances: {
     [vaultId: string]: {
-      availableSupply: string;
-      shares: string;
+      balance: string;
     };
   };
 }
 
-export function useSafeBalances() {
+export function useWalletBalances() {
   const { address } = useAppKitAccount();
   const network = useAppKitNetwork();
   const publicClient = usePublicClient();
   const { vaults } = useVaults();
-  const { safeAddress } = useSafeLinkedAccount();
 
   const { IS_UNDERLYING_WRAP_NATIVE: isUnderlyingWrapNative } = getEnvVars(
     getTypedChainId(Number(network.chainId))
   );
 
-  return useQuery<SafeBalances>({
-    queryKey: ["safeBalances", safeAddress, network.chainId],
+  return useQuery<WalletBalances>({
+    queryKey: ["walletBalances", address, network.chainId],
     queryFn: async () => {
-      if (
-        !address ||
-        !network.chainId ||
-        !publicClient ||
-        !vaults ||
-        !safeAddress
-      ) {
+      if (!address || !network.chainId || !publicClient || !vaults) {
         throw new Error("Missing required data for safe balances");
       }
 
       try {
-        const result: SafeBalances = {
-          nativeBalance: "0",
-          vaultBalances: {},
+        const result: WalletBalances = {
+          nativeBalance: "",
+          vaultTokenBalances: {},
         };
 
         if (isUnderlyingWrapNative) {
-          const balanceNative = await getEthersProvider().getBalance(
-            safeAddress
-          );
-          result.nativeBalance = formatUnits(
-            balanceNative.toBigInt(),
-            18
-          ).substring(0, 8);
+          const balanceNative = await getEthersProvider().getBalance(address);
+          result.nativeBalance = formatUnits(balanceNative.toBigInt(), 18);
         }
 
         const contracts: MulticallParameters["contracts"] =
@@ -66,13 +51,7 @@ export function useSafeBalances() {
               address: vault.staticData.token_address as Address,
               abi: IERC20ABI as Abi,
               functionName: "balanceOf",
-              args: [safeAddress as Address],
-            },
-            {
-              address: vault.staticData.vault_address as Address,
-              abi: VaultABI as Abi,
-              functionName: "balanceOf",
-              args: [safeAddress as Address],
+              args: [address as Address],
             },
           ]);
 
@@ -82,15 +61,10 @@ export function useSafeBalances() {
         });
 
         vaults.vaultsData.forEach((v, i) => {
-          const availableSupply = results[i * 2] as bigint;
-          const shares = results[i * 2 + 1] as bigint;
-
-          result.vaultBalances[v.staticData.vault_id.toString()] = {
-            availableSupply: formatUnits(
-              availableSupply,
-              v.staticData.token_decimals
-            ),
-            shares: formatUnits(shares, v.staticData.vault_decimals),
+          const availableSupply = results[i] as bigint;
+          const dec = v.staticData.token_decimals;
+          result.vaultTokenBalances[v.staticData.vault_id.toString()] = {
+            balance: formatUnits(availableSupply, dec),
           };
         });
 
@@ -98,8 +72,8 @@ export function useSafeBalances() {
       } catch (error) {
         console.error("Error fetching safe balances:", error);
         return {
-          nativeBalance: "0",
-          vaultBalances: {},
+          nativeBalance: "",
+          vaultTokenBalances: {},
         };
       }
     },
@@ -109,9 +83,7 @@ export function useSafeBalances() {
       !!publicClient &&
       address.length > 0 &&
       address.startsWith("0x") &&
-      (safeAddress
-        ? safeAddress.length > 0 && safeAddress.startsWith("0x")
-        : true) &&
+      (address ? address.length > 0 && address.startsWith("0x") : true) &&
       localStorage.getItem("disconnect_requested") !== "true", // Don't poll if disconnect was requested
     staleTime: 1000 * 30, // 30 seconds
     refetchInterval: 5000, // Poll every 5 seconds

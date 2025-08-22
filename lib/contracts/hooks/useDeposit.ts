@@ -2,9 +2,10 @@ import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext"
 import { TransactionResponse } from "@ethersproject/providers";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { SafeTransactionDataPartial } from "@safe-global/types-kit";
-import { BigNumber } from "ethers";
+import { BigNumber, Contract } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { useAccount } from "wagmi";
+import VaultABI from "../abis/VaultForked.json";
 import { getApproveTx } from "../utils/TokenUtils";
 import { getSignerAndContract } from "../utils/utils";
 
@@ -14,18 +15,22 @@ export function useDeposit() {
   const { safeAddress, isLoading, error, executeSafeTransaction } =
     useSafeLinkedAccountContext();
 
-  const cancelDepositRequest = async () => {
+  const cancelDepositRequest = async (vaultAddress: string) => {
     if (!address) throw new Error("No address found");
 
     const chainId = network.chainId?.toString() ?? "";
-    const { vault } = await getSignerAndContract(chainId);
+    const { signer } = await getSignerAndContract(chainId);
 
     const txs: SafeTransactionDataPartial[] = [];
 
     const cancelDepositRequestCall = {
-      to: vault.address,
+      to: vaultAddress,
       value: "0",
-      data: vault.interface.encodeFunctionData("cancelRequestDeposit"),
+      data: new Contract(
+        vaultAddress,
+        VaultABI,
+        signer
+      ).interface.encodeFunctionData("cancelRequestDeposit"),
     };
     txs.push(cancelDepositRequestCall);
 
@@ -38,21 +43,26 @@ export function useDeposit() {
     }
   };
 
-  const submitRequestDeposit = async (amount: string) => {
+  const submitRequestDeposit = async (
+    vaultAddress: string,
+    underlyingTokenAddress: string,
+    tokenDecimals: number,
+    amount: string
+  ) => {
     if (!address || !network.chainId) throw new Error("Failed connection");
     if (!safeAddress || isLoading || error) throw new Error("Safe not linked");
 
     const txs: SafeTransactionDataPartial[] = [];
     const chainId = network.chainId.toString();
-    const { vault, tokenMetadata } = await getSignerAndContract(chainId);
+    const { signer } = await getSignerAndContract(chainId);
 
-    const amountInWei = parseUnits(amount, tokenMetadata.decimals);
+    const amountInWei = parseUnits(amount, tokenDecimals);
 
     // Approve tokens to be transferred from safe to the vault
     const approveTx = await getApproveTx(
-      chainId,
       safeAddress,
-      vault.address,
+      vaultAddress,
+      underlyingTokenAddress,
       BigNumber.from(amountInWei)
     );
     if (approveTx) {
@@ -65,9 +75,13 @@ export function useDeposit() {
 
     // Request deposit
     const requestDepositCall = {
-      to: vault.address,
+      to: vaultAddress,
       value: "0",
-      data: vault.interface.encodeFunctionData(
+      data: new Contract(
+        vaultAddress,
+        VaultABI,
+        signer
+      ).interface.encodeFunctionData(
         "requestDeposit(uint256,address,address,address)",
         [amountInWei, safeAddress, safeAddress, safeAddress]
       ),
