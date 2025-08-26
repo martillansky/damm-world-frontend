@@ -41,17 +41,7 @@ export default function StackedAreaChart({ data }: { data: ChartDataType }) {
               setTooltip({
                 x: e.clientX,
                 y: e.clientY,
-                content:
-                  datum.metric === "hours"
-                    ? new Date(datum.date).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : new Date(datum.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      }),
+                content: datum.date,
                 vaultKey: datum.label,
                 value: datum.value,
                 chartX: chartX,
@@ -73,17 +63,30 @@ export default function StackedAreaChart({ data }: { data: ChartDataType }) {
               renderLine={true}
             >
               {Object.entries(data).map(([vaultId, data]) => {
-                data.map((d) => {
-                  return d.metric === "hours"
-                    ? (d.date = new Date(d.date).toLocaleTimeString("en-US", {
+                data.forEach((d) => {
+                  let formattedDate;
+                  if (d.metric === "hours")
+                    formattedDate = new Date(d.date).toLocaleTimeString(
+                      "en-US",
+                      {
+                        day: "numeric",
+                        month: "short",
                         hour: "2-digit",
                         minute: "2-digit",
-                      }))
-                    : (d.date = new Date(d.date).toLocaleDateString("en-US", {
+                      }
+                    );
+                  else
+                    formattedDate = new Date(d.date).toLocaleDateString(
+                      "en-US",
+                      {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
-                      }));
+                      }
+                    );
+                  if (formattedDate !== "Invalid Date") d.date = formattedDate;
+
+                  return d;
                 });
 
                 return (

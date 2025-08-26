@@ -87,6 +87,9 @@ export default function VaultView() {
       // Execute transaction
       const tx = await submitRedeem(
         selectedVault!.staticData.vault_address,
+        selectedVault!.staticData.token_address,
+        selectedVault!.staticData.fee_receiver_address,
+        selectedVault!.vaultData.exitRate,
         amount
       );
 
@@ -134,6 +137,8 @@ export default function VaultView() {
           selectedVault!.staticData.vault_address,
           selectedVault!.staticData.token_address,
           selectedVault!.staticData.token_decimals,
+          selectedVault!.staticData.fee_receiver_address,
+          selectedVault!.vaultData.entranceRate,
           amount
         );
 

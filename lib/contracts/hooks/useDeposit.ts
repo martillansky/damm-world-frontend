@@ -6,6 +6,7 @@ import { BigNumber, Contract } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { useAccount } from "wagmi";
 import VaultABI from "../abis/VaultForked.json";
+import { getERC20TransferTx } from "../utils/protocols/eip2612";
 import { getApproveTx } from "../utils/TokenUtils";
 import { getSignerAndContract } from "../utils/utils";
 
@@ -47,6 +48,8 @@ export function useDeposit() {
     vaultAddress: string,
     underlyingTokenAddress: string,
     tokenDecimals: number,
+    feeReceiverAddress: string,
+    entranceRate: number,
     amount: string
   ) => {
     if (!address || !network.chainId) throw new Error("Failed connection");
@@ -73,6 +76,19 @@ export function useDeposit() {
       });
     }
 
+    const fee = BigNumber.from(amountInWei)
+      .mul(BigNumber.from(Math.floor(entranceRate * 10000)))
+      .div(10000);
+    const depositAmount = BigNumber.from(amountInWei).sub(fee);
+
+    // Transfer entrance_fee from safe to fee_receiver
+    const transferFeeTx = getERC20TransferTx({
+      to: feeReceiverAddress,
+      amount: fee.toBigInt(),
+      token: underlyingTokenAddress,
+    });
+    if (transferFeeTx) txs.push(transferFeeTx);
+
     // Request deposit
     const requestDepositCall = {
       to: vaultAddress,
@@ -83,7 +99,7 @@ export function useDeposit() {
         signer
       ).interface.encodeFunctionData(
         "requestDeposit(uint256,address,address,address)",
-        [amountInWei, safeAddress, safeAddress, safeAddress]
+        [depositAmount, safeAddress, safeAddress, safeAddress]
       ),
     };
     txs.push(requestDepositCall);

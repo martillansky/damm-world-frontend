@@ -2,10 +2,11 @@ import { useSafeLinkedAccountContext } from "@/context/SafeLinkedAccountContext"
 import { TransactionResponse } from "@ethersproject/providers";
 import { useAppKitNetwork } from "@reown/appkit/react";
 import { SafeTransactionDataPartial } from "@safe-global/types-kit";
-import { Contract } from "ethers";
+import { BigNumber, Contract } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { useAccount } from "wagmi";
 import VaultABI from "../abis/Vault.json";
+import { getERC20TransferTx } from "../utils/protocols/eip2612";
 import { getSignerAndContract } from "../utils/utils";
 
 export function useWithdraw() {
@@ -14,7 +15,13 @@ export function useWithdraw() {
   const { safeAddress, isLoading, error, executeSafeTransaction } =
     useSafeLinkedAccountContext();
 
-  const submitRedeem = async (vaultAddress: string, amount: string) => {
+  const submitRedeem = async (
+    vaultAddress: string,
+    underlyingTokenAddress: string,
+    feeReceiverAddress: string,
+    exitRate: number,
+    amount: string
+  ) => {
     if (!address || !network.chainId) throw new Error("Failed connection");
     if (!safeAddress || isLoading || error) throw new Error("Safe not linked");
 
@@ -39,6 +46,18 @@ export function useWithdraw() {
       ]),
     };
     txs.push(redeemCall);
+
+    // Transfer exit_fee from safe to fee_receiver
+    const fee = BigNumber.from(amountInWei)
+      .mul(BigNumber.from(Math.floor(exitRate * 10000)))
+      .div(10000);
+    const transferFeeTx = getERC20TransferTx({
+      to: feeReceiverAddress,
+      amount: fee.toBigInt(),
+      token: underlyingTokenAddress,
+    });
+
+    if (transferFeeTx) txs.push(transferFeeTx);
 
     try {
       const txResponse = await executeSafeTransaction(txs);
