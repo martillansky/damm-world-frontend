@@ -16,7 +16,7 @@ export default function WalletPage() {
     if (!isConnected) {
       router.push("/");
     } else {
-      router.push(`/wallet/${address}/smartAccount`);
+      router.push(`/wallet/${address}/vault`);
     }
   }, [isConnected, router, address]);
 

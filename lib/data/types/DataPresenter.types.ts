@@ -22,8 +22,8 @@ export interface VaultDataView {
   positionRaw: number;
   position: string;
   positionUSD: string;
-  entranceFee: number;
-  exitFee: number;
+  entranceRate: number;
+  exitRate: number;
   performanceFee: number;
   managementFee: number;
 }
@@ -51,6 +51,7 @@ export interface StaticDataView {
   token_symbol: string;
   token_address: string;
   token_decimals: number;
+  fee_receiver_address: string;
   vault_icon: string;
 }
 

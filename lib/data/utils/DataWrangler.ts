@@ -39,6 +39,7 @@ export function transformStaticData(staticData: StaticData): StaticDataView {
     token_symbol: staticData.token_symbol,
     token_address: staticData.token_address,
     token_decimals: staticData.token_decimals,
+    fee_receiver_address: staticData.fee_receiver_address,
     vault_icon: "/" + staticData.token_symbol.split("(")[0] + ".png",
   };
 }
@@ -57,8 +58,8 @@ export function transformVaultData(vaultData: VaultData): VaultDataView {
     position: `${vaultData.position} WLD`,
     positionRaw: vaultData.position,
     positionUSD: `≈ $${vaultData.positionUSD}`,
-    entranceFee: vaultData.entranceFee,
-    exitFee: vaultData.exitFee,
+    entranceRate: vaultData.entranceRate,
+    exitRate: vaultData.exitRate,
     performanceFee: vaultData.performanceFee,
     managementFee: vaultData.managementFee,
   };

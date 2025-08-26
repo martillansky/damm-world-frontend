@@ -42,8 +42,8 @@ export function useVaultData(wallet: string) {
         let vaultData = await integratedPositionResponse.json();
         vaultData.positions.forEach((p: IntegratedPosition, i: number) => {
           p.token_symbol = `${p.token_symbol}(${i + 1})`;
-          p.entrance_fee = 0;
-          p.exit_fee = 0;
+          p.entrance_rate = 0;
+          p.exit_rate = 0;
         });
         if (vaultData.positions.length === 0) {
           console.warn("No positions found");

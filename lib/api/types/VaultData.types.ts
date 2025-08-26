@@ -41,8 +41,8 @@ export interface VaultData {
   valueGainedUSD: number;
   position: number;
   positionUSD: number;
-  entranceFee: number;
-  exitFee: number;
+  entranceRate: number;
+  exitRate: number;
   performanceFee: number;
   managementFee: number;
 }
@@ -76,6 +76,7 @@ export interface StaticData {
   token_symbol: string;
   token_address: string;
   token_decimals: number;
+  fee_receiver_address: string;
 }
 
 export interface IntegratedDataResponse {

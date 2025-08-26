@@ -60,6 +60,8 @@ export default function VaultView() {
   const [sharesReadyToWithdraw, setSharesReadyToWithdraw] =
     useState<string>("");
 
+  const [maxExceeded, setMaxExceeded] = useState(false);
+
   useEffect(() => {
     if (!isLoading && vaultsData) {
       setViewLoaded();
@@ -250,6 +252,18 @@ export default function VaultView() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             handleMaxClick={handleMaxClick}
+            max={
+              operation === "DEPOSIT"
+                ? Number(walletBalance)
+                : Number(sharesReadyToWithdraw)
+            }
+            validInput={(valid) => {
+              if (valid) {
+                setMaxExceeded(false);
+              } else {
+                setMaxExceeded(true);
+              }
+            }}
             labelMax={
               <>
                 Max:{" "}
@@ -400,6 +414,7 @@ export default function VaultView() {
               setAmount("");
               setOperation(null);
               setSelectedVault(null);
+              setMaxExceeded(false);
             }}
             title={`${selectedVault.staticData.token_symbol}`}
             icon={
@@ -448,19 +463,19 @@ export default function VaultView() {
                   <ObservationCard title="Investment Conditions">
                     <>
                       <CardRow
-                        left={`You can invest in this fund by depositing ${selectedVault.staticData.token_symbol}`}
+                        left={`Dposit ${selectedVault.staticData.token_symbol} to invest`}
                         variant="small"
                         style="observation"
                       />
                       <CardRow
-                        left="Entrance fee"
-                        right={selectedVault.vaultData.entranceFee}
+                        left="Entrance rate"
+                        right={selectedVault.vaultData.entranceRate}
                         variant="small"
                         style="bullet"
                       />
                       <CardRow
-                        left="Exit fee"
-                        right={selectedVault.vaultData.exitFee}
+                        left="Exit rate"
+                        right={selectedVault.vaultData.exitRate}
                         variant="small"
                         style="bullet"
                       />
@@ -488,13 +503,14 @@ export default function VaultView() {
                   <Button
                     variant="secondary"
                     onClick={() => {
-                      setOperation(null);
                       setAmount("");
+                      setOperation(null);
+                      setMaxExceeded(false);
                     }}
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleSubmit}>
+                  <Button onClick={handleSubmit} disabled={maxExceeded}>
                     {operation === "DEPOSIT"
                       ? "Invest"
                       : operation === "WITHDRAW"

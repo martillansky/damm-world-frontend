@@ -12,6 +12,7 @@ export type IntegratedPosition = {
   token_symbol: string;
   token_address: string;
   token_decimals: number;
+  fee_receiver_address: string;
   latest_tvl: number;
   tvl_12h_ago: number;
   latest_apy: number;
@@ -25,8 +26,8 @@ export type IntegratedPosition = {
   completed_deposits: number;
   settled_redeems: number;
   completed_redeems: number;
-  entrance_fee: number;
-  exit_fee: number;
+  entrance_rate: number;
+  exit_rate: number;
   performance_fee: number;
   management_fee: number;
   shares_balance: number;
@@ -47,6 +48,7 @@ export function getNullMockedIntegratedPosition(): {
         token_symbol: "",
         token_address: "",
         token_decimals: 0,
+        fee_receiver_address: "",
         latest_tvl: 0,
         tvl_12h_ago: 0,
         latest_apy: 0,
@@ -60,8 +62,8 @@ export function getNullMockedIntegratedPosition(): {
         completed_deposits: 0,
         settled_redeems: 0,
         completed_redeems: 0,
-        entrance_fee: 0,
-        exit_fee: 0,
+        entrance_rate: 0,
+        exit_rate: 0,
         performance_fee: 0,
         management_fee: 0,
         shares_balance: 0,
@@ -158,6 +160,7 @@ export function convertIntegratedPosition(
         token_symbol: p.token_symbol,
         token_address: p.token_address,
         token_decimals: p.token_decimals,
+        fee_receiver_address: p.fee_receiver_address,
       },
       vaultData: {
         tvl: p.latest_tvl / 10 ** p.token_decimals,
@@ -168,8 +171,8 @@ export function convertIntegratedPosition(
         valueGainedUSD,
         position: formattedPositionValue,
         positionUSD: formattedPositionValue * wldUsdPrice,
-        entranceFee: p.entrance_fee,
-        exitFee: p.exit_fee,
+        entranceRate: p.entrance_rate,
+        exitRate: p.exit_rate,
         performanceFee: p.performance_fee,
         managementFee: p.management_fee,
       },

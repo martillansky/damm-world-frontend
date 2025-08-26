@@ -72,17 +72,32 @@ export default function StackedAreaChart({ data }: { data: ChartDataType }) {
               curve={curveCardinal}
               renderLine={true}
             >
-              {Object.entries(data).map(([vaultId, data]) => (
-                <AreaSeries
-                  key={vaultId}
-                  dataKey={vaultId}
-                  data={data}
-                  xAccessor={(d: { date: string; value: number }) => d.date}
-                  yAccessor={(d: { date: string; value: number }) => d.value}
-                  curve={curveCardinal}
-                  fillOpacity={0.2}
-                />
-              ))}
+              {Object.entries(data).map(([vaultId, data]) => {
+                data.map((d) => {
+                  return d.metric === "hours"
+                    ? (d.date = new Date(d.date).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }))
+                    : (d.date = new Date(d.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      }));
+                });
+
+                return (
+                  <AreaSeries
+                    key={vaultId}
+                    dataKey={vaultId}
+                    data={data}
+                    xAccessor={(d: { date: string; value: number }) => d.date}
+                    yAccessor={(d: { date: string; value: number }) => d.value}
+                    curve={curveCardinal}
+                    fillOpacity={0.2}
+                  />
+                );
+              })}
             </AreaStack>
 
             <Axis key="x" orientation="bottom" numTicks={2} />

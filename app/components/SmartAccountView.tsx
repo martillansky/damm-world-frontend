@@ -98,6 +98,7 @@ export default function SmartAccountView() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<ToastType>("info");
+  const [maxExceeded, setMaxExceeded] = useState(false);
 
   useEffect(() => {
     if (!isLoading && vaultsData && address && address !== "") {
@@ -432,7 +433,13 @@ export default function SmartAccountView() {
       {/* Dialog */}
       <Dialog
         open={showDialog}
-        onClose={() => setShowDialog(false)}
+        onClose={() => {
+          setShowDialog(false);
+          setMaxBalance("");
+          setAmount("");
+          setOperation(null);
+          setMaxExceeded(false);
+        }}
         title={
           operation === "SUPPLY"
             ? `Deposit`
@@ -463,6 +470,14 @@ export default function SmartAccountView() {
                 label={"Amount"}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                max={Number(maxBalance)}
+                validInput={(valid) => {
+                  if (valid) {
+                    setMaxExceeded(false);
+                  } else {
+                    setMaxExceeded(true);
+                  }
+                }}
                 handleMaxClick={() => setAmount(maxBalance)}
                 labelMax={
                   <>
@@ -528,10 +543,19 @@ export default function SmartAccountView() {
         </DialogContents>
 
         <DialogActionButtons>
-          <Button variant="secondary" onClick={() => setShowDialog(false)}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setShowDialog(false);
+              setMaxBalance("");
+              setAmount("");
+              setOperation(null);
+              setMaxExceeded(false);
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button onClick={handleSubmit} disabled={maxExceeded}>
             {operation === "SUPPLY"
               ? "Deposit"
               : operation === "EXIT"
